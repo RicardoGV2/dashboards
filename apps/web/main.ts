@@ -187,11 +187,73 @@ function hideUndoToast() {
   $("action-toast").hidden = true;
 }
 
-function showUndoToast(label: string) {
+function showUndoToast(message: string) {
   window.clearTimeout(undoToastTimer);
-  $("action-toast-copy").textContent = `${label} placed`;
+  $("action-toast-copy").textContent = message;
   $("action-toast").hidden = false;
   undoToastTimer = window.setTimeout(hideUndoToast, 7000);
+}
+
+function openEraseConfirm() {
+  if (!ready) return;
+  const doc = history.document;
+  if (!doc.nodes.length && !doc.assets.length && !doc.connections.length) {
+    status("Workspace is already empty.");
+    return;
+  }
+
+  const objectCount = doc.nodes.length;
+  const imageCount = doc.assets.length;
+  const connectionCount = doc.connections.length;
+  const details = [
+    `${objectCount} object${objectCount === 1 ? "" : "s"}`,
+    imageCount
+      ? `${imageCount} image asset${imageCount === 1 ? "" : "s"}`
+      : "",
+    connectionCount
+      ? `${connectionCount} connection${connectionCount === 1 ? "" : "s"}`
+      : "",
+  ].filter(Boolean);
+
+  hideUndoToast();
+  $("erase-confirm-copy").textContent =
+    `This will remove ${details.join(", ")} from the canvas.`;
+  $("erase-confirm").hidden = false;
+  requestAnimationFrame(() => $("erase-cancel").focus());
+}
+
+function closeEraseConfirm(restoreFocus = true) {
+  $("erase-confirm").hidden = true;
+  if (restoreFocus) $("erase-all").focus();
+}
+
+function eraseAll() {
+  const doc = history.document;
+  if (!doc.nodes.length && !doc.assets.length && !doc.connections.length) {
+    closeEraseConfirm();
+    status("Workspace is already empty.");
+    return;
+  }
+
+  if (placement) {
+    placement = null;
+    placementPointer = null;
+    clearPlacementUi();
+  }
+  cancelGesture();
+  selected = null;
+  hideUndoToast();
+
+  history.replace({
+    ...doc,
+    nodes: [],
+    assets: [],
+    connections: [],
+  });
+
+  closeEraseConfirm(false);
+  changed();
+  showUndoToast("Workspace cleared");
 }
 
 function commitPlacement() {
@@ -210,7 +272,7 @@ function commitPlacement() {
     clearPlacementUi();
     selected = draft.selectId;
     changed();
-    showUndoToast(draft.label);
+    showUndoToast(`${draft.label} placed`);
   } catch (error) {
     status((error as Error).message, true);
     scheduleRender();
@@ -284,6 +346,10 @@ function render() {
     : `${doc.nodes.length} object${doc.nodes.length === 1 ? "" : "s"}`;
   ($("undo") as HTMLButtonElement).disabled = !history.canUndo && !placement;
   ($("redo") as HTMLButtonElement).disabled = !history.canRedo;
+  ($("erase-all") as HTMLButtonElement).disabled =
+    doc.nodes.length === 0 &&
+    doc.assets.length === 0 &&
+    doc.connections.length === 0;
 }
 
 function renderFinanceDetails(node: CanvasNode, doc: CanvasDocument) {
@@ -870,6 +936,9 @@ $("add-finance").onclick = addFinanceDemo;
 $("start").onclick = () => add("note");
 $("select").onclick = () => setTool("select");
 $("hand").onclick = () => setTool("pan");
+$("erase-all").onclick = openEraseConfirm;
+$("erase-cancel").onclick = () => closeEraseConfirm();
+$("erase-confirm-button").onclick = eraseAll;
 $("placement-cancel").onclick = () => cancelPlacement();
 $("action-undo").onclick = () => {
   if (!history.canUndo) return;
@@ -998,6 +1067,13 @@ window.addEventListener("keydown", (e) => {
   )
     return;
   const modifier = e.ctrlKey || e.metaKey;
+  if (!$("erase-confirm").hidden) {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      closeEraseConfirm();
+    }
+    return;
+  }
   if (modifier && e.key.toLowerCase() === "z") {
     e.preventDefault();
     if (placement) {
