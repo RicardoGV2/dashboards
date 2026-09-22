@@ -879,7 +879,6 @@ $("action-undo").onclick = () => {
   if (!history.canUndo) return;
   cancelGesture();
   history.undo();
-  selected = null;
   changed();
   hideUndoToast();
 };
@@ -913,7 +912,6 @@ $("undo").onclick = () => {
   }
   cancelGesture();
   history.undo();
-  selected = null;
   changed();
   hideUndoToast();
 };
@@ -921,7 +919,6 @@ $("redo").onclick = () => {
   if (placement) cancelPlacement();
   cancelGesture();
   history.redo();
-  selected = null;
   changed();
   hideUndoToast();
 };
@@ -1013,7 +1010,6 @@ window.addEventListener("keydown", (e) => {
     }
     cancelGesture();
     e.shiftKey ? history.redo() : history.undo();
-    selected = null;
     changed();
     hideUndoToast();
   } else if (e.key === "Escape") {
