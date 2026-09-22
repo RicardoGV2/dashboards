@@ -1455,7 +1455,6 @@ body.placement-mode #viewport {
   }
 }
 
-
 /* erase-all confirmation */
 .erase-all-tool {
   color: #e8a3ad;
@@ -1487,8 +1486,7 @@ body.placement-mode #viewport {
   border: 1px solid #3d2b3a;
   border-radius: 16px;
   background:
-    radial-gradient(circle at 50% 0%, #7f1d1d18, transparent 45%),
-    #0d1726;
+    radial-gradient(circle at 50% 0%, #7f1d1d18, transparent 45%), #0d1726;
   color: #dbe8f8;
   box-shadow:
     0 28px 80px #020617a6,

@@ -207,9 +207,7 @@ function openEraseConfirm() {
   const connectionCount = doc.connections.length;
   const details = [
     `${objectCount} object${objectCount === 1 ? "" : "s"}`,
-    imageCount
-      ? `${imageCount} image asset${imageCount === 1 ? "" : "s"}`
-      : "",
+    imageCount ? `${imageCount} image asset${imageCount === 1 ? "" : "s"}` : "",
     connectionCount
       ? `${connectionCount} connection${connectionCount === 1 ? "" : "s"}`
       : "",

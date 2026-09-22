@@ -379,7 +379,6 @@ test("placement can be canceled before it changes the document", async ({
   await expect(page.locator("#count")).toHaveText("0 objects");
 });
 
-
 test("erase all requires confirmation and restores the workspace with one undo", async ({
   page,
 }) => {
@@ -407,7 +406,9 @@ test("erase all requires confirmation and restores the workspace with one undo",
   await expect(page.locator("#connections .flow-connection")).toHaveCount(0);
   await expect(page.locator("body")).not.toHaveClass(/finance-mode/);
   await expect(page.locator("#erase-all")).toBeDisabled();
-  await expect(page.locator("#action-toast")).toContainText("Workspace cleared");
+  await expect(page.locator("#action-toast")).toContainText(
+    "Workspace cleared",
+  );
 
   await page.locator("#action-undo").click();
   await expect(page.locator(".canvas-node.finance-person")).toHaveCount(2);
