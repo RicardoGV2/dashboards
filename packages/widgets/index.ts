@@ -1,6 +1,6 @@
 import type { CanvasNode, CubeAnimation, NodeKind } from "../document/index.ts";
 
-export type CreateableNodeKind = Exclude<NodeKind, "image">;
+export type CreateableNodeKind = Exclude<NodeKind, "image" | "finance">;
 
 export interface WidgetDefinition {
   label: string;
