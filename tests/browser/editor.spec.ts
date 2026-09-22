@@ -65,6 +65,7 @@ test("drag is one undo transaction, cancel does not mutate, zoom and culling", a
 }) => {
   await page.locator("[data-add=shape]").click();
   await placePreview(page);
+  await page.locator("#fit").click();
   await expect(page.locator(".canvas-node")).toBeVisible();
   const initialX = Number(await page.locator("#x").inputValue());
   let box = (await page.locator(".canvas-node").boundingBox())!;
