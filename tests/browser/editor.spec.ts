@@ -272,3 +272,19 @@ test("finance visualization adds animated flows without removing existing widget
   await expect(page.locator(".canvas-node.note")).toHaveCount(1);
   await expect(page.locator("#connections .flow-connection")).toHaveCount(16);
 });
+
+
+test("dark visual theme is active before finance is added", async ({ page }) => {
+  await expect(page.locator("body")).toHaveClass(/app-theme-dark/);
+  await expect(page.locator("body")).not.toHaveClass(/finance-mode/);
+  await expect(page.locator("#flow-banner")).toBeHidden();
+
+  await page.locator("#start").click();
+  await expect(page.locator("body")).toHaveClass(/app-theme-dark/);
+  await expect(page.locator(".canvas-node.note")).toHaveCount(1);
+
+  await page.locator("#add-finance").click();
+  await expect(page.locator("body")).toHaveClass(/app-theme-dark/);
+  await expect(page.locator("body")).toHaveClass(/finance-mode/);
+  await expect(page.locator("#flow-banner")).toBeVisible();
+});
