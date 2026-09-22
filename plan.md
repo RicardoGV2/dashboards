@@ -140,6 +140,6 @@ Do not begin a full spreadsheet, raster editor, collaborative protocol and new G
 
 ## Hosting and review
 
-GitHub Pages can host the static editor. Backend services are separate when introduced. Keep GitHub as source control. Build output is `apps/web/dist` with base `/dashboards/`; current CI validates it without deploying. Original root sample files are not reused by the editor. Publishing the new application requires an explicit deployment step after review. Current branch provides implementation and roadmap for that review, not a claim of a completed universal dashboard.
+GitHub Pages can host the static editor. Backend services are separate when introduced. Keep GitHub as source control. Build output is `apps/web/dist` with base `/dashboards/`; CI validates the application. The user authorized publishing the foundation on main on 2026-09-22. Run `npm run build:pages` to refresh the production root index.html and assets/ used by the existing Pages deployment. Commit generated output alongside source changes. Original sample code is not reused by the editor; it remains available in Git history. This is a foundation release, not a completed universal dashboard.
 
 Assumptions: single-user local-first initially, trusted bundled widgets, precise data semantics before generative styling. These are reversible product choices. No additional approval is required for the foundation work requested in this conversation.

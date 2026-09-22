@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
     "test:browser": "playwright test",
-    "format:check": "prettier --check \"apps/web/*.{ts,css,html}\" \"packages/**/*.ts\" \"tests/**/*.ts\" playwright.config.ts tsconfig.json package.json"
+    "format:check": "prettier --check \"apps/web/*.{ts,css,html}\" \"packages/**/*.ts\" \"tests/**/*.ts\" playwright.config.ts tsconfig.json package.json",
+    "build:pages": "npm run build && node scripts/prepare-pages.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.1",

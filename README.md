@@ -20,7 +20,7 @@ npx playwright install chromium webkit
 npm run test:browser  # desktop, WebKit and phone-viewport tests
 ```
 
-Build output: `apps/web/dist`. The root sample and existing Pages configuration are retained for a later explicit deployment; this branch adds CI only.
+Build output: `apps/web/dist`. GitHub Pages serves the production `index.html` and `assets/` checked into the repository root. Run `npm run build:pages` and commit the generated files alongside source changes before publishing. The previous sample is available in Git history; the new editor does not reuse it.
 
 ## Working now
 
