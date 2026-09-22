@@ -1,0 +1,24 @@
+{
+  "name": "infinite-dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.6"
+  },
+  "scripts": {
+    "dev": "vite apps/web --host 127.0.0.1",
+    "build": "tsc --noEmit && vite build apps/web --base=/dashboards/",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "test:browser": "playwright test",
+    "format:check": "prettier --check \"apps/web/*.{ts,css,html}\" \"packages/**/*.ts\" \"tests/**/*.ts\" playwright.config.ts tsconfig.json package.json",
+    "build:pages": "npm run build && node scripts/prepare-pages.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.1",
+    "prettier": "3.6.2",
+    "typescript": "~5.9.3",
+    "vite": "^7.1.7"
+  }
+}

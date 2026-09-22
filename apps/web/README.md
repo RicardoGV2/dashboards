@@ -1,5 +1,3 @@
-# Web application (planned)
+# Web shell
 
-Future React + TypeScript + Vite shell for the custom infinite canvas. Not implemented yet. The currently deployed sample remains at repository-root `index.html`.
-
-After approval: define workspace package configuration, the application shell, responsive editing chrome, accessible toolbars, and a GitHub Pages-compatible base path (`/dashboards/`). Do not modify deployment until the new app builds and is reviewed. See [`../../plan.md`](../../plan.md).
+Runnable TypeScript/Vite editor. Run `npm run dev` at the repository root. Composes portable document/camera/history modules, a DOM renderer, browser input and IndexedDB. Built assets are in `dist/` with `/dashboards/` base path. Run `npm run build:pages` at the repository root to prepare the checked-in Pages output. The editor does not reuse the previous sample. See the root README and plan for limitations.

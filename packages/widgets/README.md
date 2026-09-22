@@ -1,3 +1,3 @@
-# Widgets (planned)
+# Widgets
 
-Versioned widget registry and adapters for charts, text, images, Mermaid diagrams, code, tables, video and future plugins. Individual widgets own content editing; the engine owns spatial behavior. No implementation yet. See [`../../plan.md`](../../plan.md).
+Implemented: a typed registry of defaults and a factory for note/text/shape objects. This is a starter registry, not the final third-party plugin contract. Schema validation lives in `document`, drawing in the renderer. Introduce independently versioned validators/render/export hooks with the first rich widget; isolate untrusted runtime code before accepting external plugins.

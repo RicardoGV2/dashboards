@@ -1,3 +1,3 @@
-# Camera (planned)
+# Camera
 
-World/screen transforms, cursor-centered zoom, pan, viewport state and tested inverse matrices. No implementation yet. See [`../../../../plan.md`](../../../../plan.md).
+Pure world/screen transforms, bounded pan and anchored zoom are implemented in `index.ts` and tested without a browser. Coordinates are viewport CSS pixels or world units, never mixed with device pixels. Rotation and affine group transforms are future work.

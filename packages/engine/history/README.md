@@ -1,3 +1,3 @@
-# History (planned)
+# Commands and history
 
-Document transactions, commands, undo/redo and recovery semantics. No implementation yet. See [`../../../../plan.md`](../../../../plan.md).
+Atomic create/update/delete transactions validate a cloned document before acceptance. History owns state, exposes copies and bounds snapshot retention. Gesture previews live outside committed state; pointer release commits one transaction, cancel discards it. Network revisions, collaborative undo and operation journaling remain future work.
