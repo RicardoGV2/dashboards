@@ -31,7 +31,9 @@ export function applyCommands(
       continue;
     }
     if (command.type === "deleteAsset") {
-      const assetIndex = next.assets.findIndex((asset) => asset.id === command.id);
+      const assetIndex = next.assets.findIndex(
+        (asset) => asset.id === command.id,
+      );
       if (assetIndex < 0) throw new Error("Asset no longer exists.");
       next.assets.splice(assetIndex, 1);
       continue;

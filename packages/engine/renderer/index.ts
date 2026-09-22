@@ -1,9 +1,6 @@
 import { worldToScreen } from "../camera/index.ts";
 import type { Camera, Point } from "../camera/index.ts";
-import type {
-  CanvasNode,
-  ImageAsset,
-} from "../../document/index.ts";
+import type { CanvasNode, ImageAsset } from "../../document/index.ts";
 
 /** DOM adapter: the model does not contain browser objects or styling. */
 export function renderNodes(
@@ -51,7 +48,10 @@ export function renderNodes(
       const animation = node.animation!;
       const scene = document.createElement("div");
       scene.className = "cube-scene";
-      scene.style.setProperty("--cube-perspective", `${animation.perspective}px`);
+      scene.style.setProperty(
+        "--cube-perspective",
+        `${animation.perspective}px`,
+      );
       scene.style.setProperty(
         "--cube-size",
         `${Math.max(72, Math.min(node.width, node.height) * 0.58)}px`,
@@ -59,10 +59,7 @@ export function renderNodes(
       const cube = document.createElement("div");
       cube.className = `cube axis-${animation.axis}`;
       cube.style.setProperty("--cube-color", node.color);
-      cube.style.setProperty(
-        "--cube-duration",
-        `${360 / animation.speed}s`,
-      );
+      cube.style.setProperty("--cube-duration", `${360 / animation.speed}s`);
       cube.style.animationDirection =
         animation.direction === "clockwise" ? "normal" : "reverse";
       cube.style.animationPlayState = animation.paused ? "paused" : "running";

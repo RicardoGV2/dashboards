@@ -1,8 +1,4 @@
-import type {
-  CanvasNode,
-  CubeAnimation,
-  NodeKind,
-} from "../document/index.ts";
+import type { CanvasNode, CubeAnimation, NodeKind } from "../document/index.ts";
 
 export type CreateableNodeKind = Exclude<NodeKind, "image">;
 

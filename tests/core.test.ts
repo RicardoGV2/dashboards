@@ -11,10 +11,7 @@ import {
   validateDocument,
 } from "../packages/document/index.ts";
 import { History, applyCommands } from "../packages/engine/history/index.ts";
-import {
-  createImageNode,
-  createNode,
-} from "../packages/widgets/index.ts";
+import { createImageNode, createNode } from "../packages/widgets/index.ts";
 test("world/screen inverse across supported coordinate and zoom bounds", () => {
   for (const zoom of [0.1, 0.25, 1, 4])
     for (const x of [-1e6, -10.7, 0, 17, 1e6]) {
@@ -116,7 +113,6 @@ test("history retains bounded undo depth", () => {
   assert.equal(h.document.nodes[0].x, 30);
 });
 
-
 test("legacy schema migrates without changing existing nodes", () => {
   const node = createNode("note", 10, 20);
   const legacy = {
@@ -199,5 +195,8 @@ test("image assets and cube animation survive validation and history", () => {
     { type: "deleteAsset", id: asset.id },
   ]);
   assert.equal(cleaned.assets.length, 0);
-  assert.equal(cleaned.nodes.some((node) => node.kind === "image"), false);
+  assert.equal(
+    cleaned.nodes.some((node) => node.kind === "image"),
+    false,
+  );
 });

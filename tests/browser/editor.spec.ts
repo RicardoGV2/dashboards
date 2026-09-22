@@ -153,7 +153,6 @@ test("a storage failure remains visible without discarding work", async ({
   await expect(page.locator("#export")).toBeEnabled();
 });
 
-
 test("image upload and animated cube controls persist", async ({ page }) => {
   const png = Buffer.from(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9WlYvqsAAAAASUVORK5CYII=",

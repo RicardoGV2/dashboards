@@ -22,10 +22,7 @@ import type {
 import { History } from "../../packages/engine/history/index.ts";
 import type { Command } from "../../packages/engine/history/index.ts";
 import { renderNodes } from "../../packages/engine/renderer/index.ts";
-import {
-  createImageNode,
-  createNode,
-} from "../../packages/widgets/index.ts";
+import { createImageNode, createNode } from "../../packages/widgets/index.ts";
 import type { CreateableNodeKind } from "../../packages/widgets/index.ts";
 import * as storage from "../../packages/storage/index.ts";
 const $ = <T extends HTMLElement = HTMLElement>(id: string) =>
@@ -149,8 +146,7 @@ function refreshInspector() {
     $<HTMLInputElement>("animation-perspective").value = String(
       animation.perspective,
     );
-    $("animation-perspective-value").textContent =
-      `${animation.perspective}px`;
+    $("animation-perspective-value").textContent = `${animation.perspective}px`;
     $<HTMLInputElement>("animation-paused").checked = animation.paused;
     $("animation-state").textContent = animation.paused ? "Paused" : "Running";
   }
@@ -220,7 +216,8 @@ function readImageDataUrl(file: File): Promise<string> {
       typeof reader.result === "string"
         ? resolve(reader.result)
         : reject(new Error("Could not read image."));
-    reader.onerror = () => reject(reader.error ?? new Error("Could not read image."));
+    reader.onerror = () =>
+      reject(reader.error ?? new Error("Could not read image."));
     reader.readAsDataURL(file);
   });
 }
@@ -263,11 +260,7 @@ async function addImage(file: File) {
     bytes: file.size,
   };
 
-  const scale = Math.min(
-    1,
-    520 / dimensions.width,
-    360 / dimensions.height,
-  );
+  const scale = Math.min(1, 520 / dimensions.width, 360 / dimensions.height);
   const width = Math.max(80, Math.round(dimensions.width * scale));
   const height = Math.max(60, Math.round(dimensions.height * scale));
   const viewportSize = size();
@@ -529,7 +522,9 @@ $<HTMLInputElement>("animation-speed").addEventListener("input", (event) => {
     `${(event.target as HTMLInputElement).value}°/s`;
 });
 $<HTMLInputElement>("animation-speed").addEventListener("change", (event) => {
-  updateCubeAnimation({ speed: Number((event.target as HTMLInputElement).value) });
+  updateCubeAnimation({
+    speed: Number((event.target as HTMLInputElement).value),
+  });
 });
 $<HTMLSelectElement>("animation-direction").addEventListener(
   "change",
