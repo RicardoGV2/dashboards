@@ -169,7 +169,7 @@ test("a storage failure remains visible without discarding work", async ({
   page,
 }) => {
   await page.evaluate(() => {
-    indexedDB.open = () => {
+    IDBDatabase.prototype.transaction = () => {
       throw new DOMException("Test quota failure", "QuotaExceededError");
     };
   });
