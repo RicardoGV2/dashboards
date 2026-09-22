@@ -68,12 +68,14 @@ test("drag is one undo transaction, cancel does not mutate, zoom and culling", a
   await page.locator("#fit").click();
   await expect(page.locator(".canvas-node")).toBeVisible();
   const initialX = Number(await page.locator("#x").inputValue());
+  const zoom = Number((await page.locator("#zoom").textContent())!.replace("%", "")) / 100;
   let box = (await page.locator(".canvas-node").boundingBox())!;
   await page.mouse.move(box.x + 40, box.y + 40);
   await page.mouse.down();
   await page.mouse.move(box.x + 110, box.y + 70, { steps: 8 });
   await page.mouse.up();
-  await expect(page.locator("#x")).toHaveValue(String(initialX + 70));
+  const movedX = Number(await page.locator("#x").inputValue());
+  expect(Math.abs(movedX - (initialX + 70 / zoom))).toBeLessThan(0.001);
   await page.locator("#undo").click();
   await expect(page.locator("#x")).toHaveValue(String(initialX));
   await expect(page.locator(".canvas-node")).toBeVisible();
