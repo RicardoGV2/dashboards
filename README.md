@@ -30,6 +30,7 @@ Build output: `apps/web/dist`. GitHub Pages serves the production `index.html` a
 - PNG, JPEG, WebP and GIF image uploads (2 MB each) stored as document assets and exported with the workspace.
 - Animated cube widget with speed, direction, axis, color, perspective and pause controls.
 - Finance visual map demo with reusable person modules, bank-city cards, animated incoming/outgoing money flows, expand/collapse and a finance inspector. Demo data only; no real bank connection yet.
+- The dark/navy visual theme is global from first load; Finance adds finance-specific flows and overlays but no longer controls the application theme.
 - Single-writer tab protection, import bounds and visible storage failures.
 
 Drag empty space or use Pan. Scroll pans; Ctrl/⌘ + scroll zooms. Select canvas then V/H switches tools; N adds a note; arrow keys move a selected object (Shift = 10 units), or pan if none is selected. Ctrl/⌘ Z undoes; Shift adds redo. Escape cancels a drag. Properties offer keyboard-accessible size/position editing.
