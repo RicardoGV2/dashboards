@@ -689,6 +689,7 @@ function updateCubeAnimation(patch: Partial<CubeAnimation>) {
 }
 
 function setTool(value: typeof tool) {
+  if (placement) cancelPlacement();
   tool = value;
   $("select").setAttribute("aria-pressed", String(value === "select"));
   $("hand").setAttribute("aria-pressed", String(value === "pan"));
@@ -872,6 +873,15 @@ $("add-finance").onclick = addFinanceDemo;
 $("start").onclick = () => add("note");
 $("select").onclick = () => setTool("select");
 $("hand").onclick = () => setTool("pan");
+$("placement-cancel").onclick = () => cancelPlacement();
+$("action-undo").onclick = () => {
+  if (!history.canUndo) return;
+  cancelGesture();
+  history.undo();
+  selected = null;
+  changed();
+  hideUndoToast();
+};
 $("nodes").addEventListener("click", (event) => {
   const button = (event.target as HTMLElement).closest<HTMLButtonElement>(
     "[data-finance-toggle]",
@@ -896,14 +906,23 @@ $("nodes").addEventListener("click", (event) => {
   ]);
 });
 $("undo").onclick = () => {
+  if (placement) {
+    cancelPlacement();
+    return;
+  }
   cancelGesture();
   history.undo();
+  selected = null;
   changed();
+  hideUndoToast();
 };
 $("redo").onclick = () => {
+  if (placement) cancelPlacement();
   cancelGesture();
   history.redo();
+  selected = null;
   changed();
+  hideUndoToast();
 };
 $("delete").onclick = deleteSelected;
 $("fit").onclick = fit;
@@ -987,10 +1006,20 @@ window.addEventListener("keydown", (e) => {
   const modifier = e.ctrlKey || e.metaKey;
   if (modifier && e.key.toLowerCase() === "z") {
     e.preventDefault();
+    if (placement) {
+      cancelPlacement();
+      return;
+    }
     cancelGesture();
     e.shiftKey ? history.redo() : history.undo();
+    selected = null;
     changed();
+    hideUndoToast();
   } else if (e.key === "Escape") {
+    if (placement) {
+      cancelPlacement();
+      return;
+    }
     cancelGesture();
     select(null);
   } else if (e.code === "Space" && e.target === viewport) {
@@ -1046,7 +1075,10 @@ $("export").onclick = () => {
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
-$("import").onclick = () => $<HTMLInputElement>("file").click();
+$("import").onclick = () => {
+  if (placement) cancelPlacement();
+  $<HTMLInputElement>("file").click();
+};
 $("file").addEventListener("change", async () => {
   const input = $<HTMLInputElement>("file");
   const file = input.files?.[0];
