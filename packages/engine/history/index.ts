@@ -1,5 +1,10 @@
 import { validateDocument } from "../../document/index.ts";
-import type { CanvasDocument, CanvasNode } from "../../document/index.ts";
+import type {
+  CanvasDocument,
+  CanvasNode,
+  ImageAsset,
+} from "../../document/index.ts";
+
 export type Command =
   | { type: "create"; node: CanvasNode }
   | {
@@ -7,43 +12,68 @@ export type Command =
       id: string;
       patch: Partial<Omit<CanvasNode, "id" | "kind">>;
     }
-  | { type: "delete"; id: string };
+  | { type: "delete"; id: string }
+  | { type: "createAsset"; asset: ImageAsset }
+  | { type: "deleteAsset"; id: string };
+
 export function applyCommands(
   document: CanvasDocument,
   commands: readonly Command[],
 ): CanvasDocument {
   const next = structuredClone(document);
   for (const command of commands) {
-    if (command.type === "create")
+    if (command.type === "create") {
       next.nodes.push(structuredClone(command.node));
-    else {
-      const index = next.nodes.findIndex((n) => n.id === command.id);
-      if (index < 0) throw new Error("Object no longer exists.");
-      if (command.type === "delete") next.nodes.splice(index, 1);
-      else if (command.type === "update") {
-        if (
-          Object.keys(command.patch).some(
-            (k) =>
-              !["x", "y", "width", "height", "title", "text", "color"].includes(
-                k,
-              ),
-          )
-        )
-          throw new Error("Unsupported update field.");
-        next.nodes[index] = { ...next.nodes[index], ...command.patch };
-      } else throw new Error("Unsupported command.");
+      continue;
     }
+    if (command.type === "createAsset") {
+      next.assets.push(structuredClone(command.asset));
+      continue;
+    }
+    if (command.type === "deleteAsset") {
+      const assetIndex = next.assets.findIndex((asset) => asset.id === command.id);
+      if (assetIndex < 0) throw new Error("Asset no longer exists.");
+      next.assets.splice(assetIndex, 1);
+      continue;
+    }
+
+    const index = next.nodes.findIndex((n) => n.id === command.id);
+    if (index < 0) throw new Error("Object no longer exists.");
+    if (command.type === "delete") next.nodes.splice(index, 1);
+    else if (command.type === "update") {
+      if (
+        Object.keys(command.patch).some(
+          (k) =>
+            ![
+              "x",
+              "y",
+              "width",
+              "height",
+              "title",
+              "text",
+              "color",
+              "assetId",
+              "animation",
+            ].includes(k),
+        )
+      )
+        throw new Error("Unsupported update field.");
+      next.nodes[index] = { ...next.nodes[index], ...command.patch };
+    } else throw new Error("Unsupported command.");
   }
   return validateDocument(next);
 }
+
 /** Small bounded snapshot history; replace with inverse patches after profiling. */
 export class History {
   #document: CanvasDocument;
   #past: CanvasDocument[] = [];
   #future: CanvasDocument[] = [];
+
   constructor(document: CanvasDocument) {
     this.#document = validateDocument(document);
   }
+
   get document(): CanvasDocument {
     return structuredClone(this.#document);
   }
@@ -53,9 +83,11 @@ export class History {
   get canRedo() {
     return this.#future.length > 0;
   }
+
   execute(commands: readonly Command[]) {
     this.replace(applyCommands(this.#document, commands));
   }
+
   replace(document: CanvasDocument) {
     const next = validateDocument(document);
     if (JSON.stringify(next) === JSON.stringify(this.#document)) return;
@@ -68,6 +100,7 @@ export class History {
     this.#document = next;
     this.#future = [];
   }
+
   undo() {
     const previous = this.#past.pop();
     if (previous) {
@@ -75,6 +108,7 @@ export class History {
       this.#document = previous;
     }
   }
+
   redo() {
     const next = this.#future.pop();
     if (next) {
