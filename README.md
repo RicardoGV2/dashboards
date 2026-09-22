@@ -27,6 +27,7 @@ Build output: `apps/web/dist`. GitHub Pages serves the production `index.html` a
 - Pan, anchored zoom, touch pinch, fit view, viewport culling.
 - Create/select/move/resize notes, text, shapes, uploaded images, animated 3D cubes and reusable finance visual nodes; edit via properties and accessible object list.
 - Atomic validated commands, undo/redo, IndexedDB autosave and JSON import/export.
+- Erase all control with explicit confirmation; clearing the workspace is one undoable history action, so the full canvas can be restored immediately.
 - Confirm-before-place workflow: new notes, text, shapes, cubes, images and Finance maps appear as movable previews first; click or drag-and-release to commit, Esc cancels, and the committed insertion is one undo transaction.
 - PNG, JPEG, WebP and GIF image uploads (2 MB each) stored as document assets and exported with the workspace.
 - Animated cube widget with speed, direction, axis, color, perspective and pause controls.
