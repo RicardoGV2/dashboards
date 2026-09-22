@@ -1,0 +1,40 @@
+name: Feature bundle
+on:
+  push:
+    branches: [feat/images-and-cube]
+permissions:
+  contents: read
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Format feature files
+        run: npm exec prettier -- --write "apps/web/*.{ts,css,html}" "packages/**/*.ts" "tests/**/*.ts" playwright.config.ts tsconfig.json package.json
+      - run: npm test
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium webkit
+      - run: npm run test:browser
+      - run: npm run build:pages
+      - uses: actions/upload-artifact@v4
+        with:
+          name: formatted-feature-bundle
+          if-no-files-found: error
+          path: |
+            apps/web/index.html
+            apps/web/main.ts
+            apps/web/style.css
+            packages/document/index.ts
+            packages/widgets/index.ts
+            packages/engine/renderer/index.ts
+            packages/engine/history/index.ts
+            tests/core.test.ts
+            tests/browser/editor.spec.ts
+            index.html
+            assets/
+            .nojekyll
