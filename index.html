@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#07101c" />
     <title>Field — Infinite workspace</title>
-    <script type="module" crossorigin src="/dashboards/assets/index-Ba_xlzY1.js"></script>
-    <link rel="stylesheet" crossorigin href="/dashboards/assets/index-DLN9Gq9S.css">
+    <script type="module" crossorigin src="/dashboards/assets/index-BohYnaiq.js"></script>
+    <link rel="stylesheet" crossorigin href="/dashboards/assets/index-CPOy0ZiI.css">
   </head>
   <body class="app-theme-dark">
     <div id="app">
@@ -69,6 +69,18 @@
             <span><i class="legend-dot outgoing"></i> Outgoing</span>
             <span><i class="legend-dot transfer"></i> Transfer</span>
             <span><i class="legend-line structure"></i> Relationship</span>
+          </div>
+          <div id="placement-hint" hidden>
+            <span class="placement-icon">✦</span>
+            <div>
+              <strong id="placement-title">Place item</strong>
+              <span id="placement-copy">Move it, then click to place</span>
+            </div>
+            <button id="placement-cancel" type="button">Cancel</button>
+          </div>
+          <div id="action-toast" hidden role="status" aria-live="polite">
+            <span id="action-toast-copy">Item placed</span>
+            <button id="action-undo" type="button">Undo</button>
           </div>
           <div id="welcome">
             <span class="eyebrow">AN OPEN SPACE FOR YOUR IDEAS</span>

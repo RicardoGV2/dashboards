@@ -1,14 +1,22 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
   await expect(page.locator("#status")).toContainText("Ready");
 });
+
+async function placePreview(page: Page) {
+  await expect(page.locator("#placement-hint")).toBeVisible();
+  const box = (await page.locator("#viewport").boundingBox())!;
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  await expect(page.locator("#placement-hint")).toBeHidden();
+}
 test("edit, undo, reload, export, import validation, and safe text", async ({
   page,
 }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.locator("#start").click();
+  await placePreview(page);
   await page.locator("#title").fill("First idea");
   await page.locator("#title").press("Tab");
   await page.locator("#text").fill("<img src=x onerror=alert(1)>");
@@ -56,14 +64,19 @@ test("drag is one undo transaction, cancel does not mutate, zoom and culling", a
   page,
 }) => {
   await page.locator("[data-add=shape]").click();
+  await placePreview(page);
+  await page.locator("#fit").click();
   await expect(page.locator(".canvas-node")).toBeVisible();
   const initialX = Number(await page.locator("#x").inputValue());
+  const zoom =
+    Number((await page.locator("#zoom").textContent())!.replace("%", "")) / 100;
   let box = (await page.locator(".canvas-node").boundingBox())!;
   await page.mouse.move(box.x + 40, box.y + 40);
   await page.mouse.down();
   await page.mouse.move(box.x + 110, box.y + 70, { steps: 8 });
   await page.mouse.up();
-  await expect(page.locator("#x")).toHaveValue(String(initialX + 70));
+  const movedX = Number(await page.locator("#x").inputValue());
+  expect(Math.abs(movedX - (initialX + 70 / zoom))).toBeLessThan(0.5);
   await page.locator("#undo").click();
   await expect(page.locator("#x")).toHaveValue(String(initialX));
   await expect(page.locator(".canvas-node")).toBeVisible();
@@ -75,8 +88,13 @@ test("drag is one undo transaction, cancel does not mutate, zoom and culling", a
   await page.mouse.up();
   await page.locator("#object-list button").click();
   await expect(page.locator("#x")).toHaveValue(String(initialX));
+  const zoomBeforeButton = Number(
+    (await page.locator("#zoom").textContent())!.replace("%", ""),
+  );
   await page.locator("#zoom-in").click();
-  await expect(page.locator("#zoom")).toHaveText("120%");
+  await expect(page.locator("#zoom")).toHaveText(
+    `${Math.round(zoomBeforeButton * 1.2)}%`,
+  );
   await page.locator("#x").fill("90000");
   await page.locator("#x").press("Tab");
   await expect(page.locator(".canvas-node")).toHaveCount(0);
@@ -88,17 +106,24 @@ test("second tab cannot overwrite the writer tab", async ({
   context,
 }) => {
   await page.locator("#start").click();
+  await placePreview(page);
   await expect(page.locator("#status")).toHaveText("Saved on this device");
   const other = await context.newPage();
   await other.goto("/");
   await expect(other.locator("#status")).toContainText("Another tab");
   await other.locator("[data-add=text]").click();
+  const otherBox = (await other.locator("#viewport").boundingBox())!;
+  await other.mouse.click(
+    otherBox.x + otherBox.width / 2,
+    otherBox.y + otherBox.height / 2,
+  );
   await expect(other.locator("#status")).toContainText("Autosave unavailable");
   await page.reload();
   await expect(page.locator("#count")).toHaveText("1 object");
 });
 test("keyboard object editing and responsive controls", async ({ page }) => {
   await page.locator("[data-add=text]").click();
+  await placePreview(page);
   await page.locator("#viewport").focus();
   const x = Number(await page.locator("#x").inputValue());
   await page.keyboard.press("ArrowRight");
@@ -145,11 +170,12 @@ test("a storage failure remains visible without discarding work", async ({
   page,
 }) => {
   await page.evaluate(() => {
-    indexedDB.open = () => {
+    IDBDatabase.prototype.transaction = () => {
       throw new DOMException("Test quota failure", "QuotaExceededError");
     };
   });
   await page.locator("#start").click();
+  await placePreview(page);
   await expect(page.locator("#status")).toContainText("Save failed");
   await expect(page.locator(".canvas-node")).toHaveCount(1);
   await expect(page.locator("#export")).toBeEnabled();
@@ -166,10 +192,13 @@ test("image upload and animated cube controls persist", async ({ page }) => {
     buffer: png,
   });
   await expect(page.locator(".canvas-node.image img")).toHaveCount(1);
+  await placePreview(page);
+  await expect(page.locator(".canvas-node.image img")).toHaveCount(1);
   await expect(page.locator("#image-info")).toContainText("pixel.png");
   await expect(page.locator("#count")).toHaveText("1 object");
 
   await page.locator("[data-add=cube]").click();
+  await placePreview(page);
   await expect(page.locator(".canvas-node.cube .cube")).toHaveCount(1);
   await expect(page.locator("#animation-controls")).toBeVisible();
 
@@ -228,10 +257,12 @@ test("finance visualization adds animated flows without removing existing widget
   page,
 }) => {
   await page.locator("#start").click();
+  await placePreview(page);
   await page.locator("#title").fill("Keep this note");
   await page.locator("#title").press("Tab");
 
   await page.locator("#add-finance").click();
+  await placePreview(page);
 
   await expect(page.locator("body")).toHaveClass(/finance-mode/);
   await expect(page.locator(".canvas-node.finance-person")).toHaveCount(2);
@@ -281,11 +312,69 @@ test("dark visual theme is active before finance is added", async ({
   await expect(page.locator("#flow-banner")).toBeHidden();
 
   await page.locator("#start").click();
+  await placePreview(page);
   await expect(page.locator("body")).toHaveClass(/app-theme-dark/);
   await expect(page.locator(".canvas-node.note")).toHaveCount(1);
 
   await page.locator("#add-finance").click();
+  await placePreview(page);
   await expect(page.locator("body")).toHaveClass(/app-theme-dark/);
   await expect(page.locator("body")).toHaveClass(/finance-mode/);
   await expect(page.locator("#flow-banner")).toBeVisible();
+});
+
+test("placement preview prevents accidental duplicate finance scenes and supports one-step undo", async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    testInfo.project.name === "mobile",
+    "Desktop hover placement check",
+  );
+
+  await page.locator("#add-finance").click();
+  await expect(page.locator("#placement-hint")).toBeVisible();
+  await expect(page.locator(".canvas-node.finance-person")).toHaveCount(2);
+  await expect(page.locator("#count")).toContainText("placing Finance map");
+
+  const before = (await page
+    .locator(".canvas-node.finance-person")
+    .first()
+    .boundingBox())!;
+
+  const viewport = (await page.locator("#viewport").boundingBox())!;
+  await page.mouse.move(
+    viewport.x + viewport.width * 0.72,
+    viewport.y + viewport.height * 0.4,
+  );
+  const after = (await page
+    .locator(".canvas-node.finance-person")
+    .first()
+    .boundingBox())!;
+  expect(Math.abs(after.x - before.x)).toBeGreaterThan(20);
+
+  await page.locator("#add-finance").click();
+  await expect(page.locator(".canvas-node.finance-person")).toHaveCount(2);
+
+  await page.mouse.click(
+    viewport.x + viewport.width * 0.72,
+    viewport.y + viewport.height * 0.4,
+  );
+  await expect(page.locator("#placement-hint")).toBeHidden();
+  await expect(page.locator(".canvas-node.finance-person")).toHaveCount(2);
+  await expect(page.locator("#action-toast")).toBeVisible();
+
+  await page.locator("#action-undo").click();
+  await expect(page.locator(".canvas-node.finance-person")).toHaveCount(0);
+  await expect(page.locator("body")).not.toHaveClass(/finance-mode/);
+});
+
+test("placement can be canceled before it changes the document", async ({
+  page,
+}) => {
+  await page.locator("[data-add=note]").click();
+  await expect(page.locator(".canvas-node.note")).toHaveCount(1);
+  await expect(page.locator("#count")).toContainText("placing Note");
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".canvas-node.note")).toHaveCount(0);
+  await expect(page.locator("#count")).toHaveText("0 objects");
 });

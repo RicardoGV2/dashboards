@@ -1332,3 +1332,125 @@ body.app-theme-dark .asset-info {
     display: none;
   }
 }
+
+/* confirm-before-place interaction */
+body.placement-mode #viewport {
+  cursor: crosshair;
+}
+.tools button.is-placing,
+#add-image.is-placing,
+#add-finance.is-placing {
+  background: #173a61 !important;
+  color: #9bd0ff !important;
+  box-shadow: inset 0 0 0 1px #4b9ce4;
+}
+.canvas-node.placement-preview {
+  pointer-events: none !important;
+  opacity: 0.72;
+  filter: saturate(0.82);
+  outline: 2px dashed #6db9ff !important;
+  outline-offset: 5px;
+  box-shadow:
+    0 0 0 7px #60a5fa12,
+    0 0 38px #3b82f62b !important;
+}
+.flow-connection.placement-preview {
+  opacity: 0.55;
+}
+.flow-connection.placement-preview .flow-particle {
+  opacity: 0.6;
+}
+#placement-hint,
+#action-toast {
+  position: absolute;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #2d4668;
+  border-radius: 12px;
+  background: #0b1729ed;
+  color: #dbeafe;
+  box-shadow: 0 14px 34px #02061766;
+  backdrop-filter: blur(12px);
+}
+#placement-hint {
+  left: 50%;
+  top: 22px;
+  transform: translateX(-50%);
+  min-width: min(390px, calc(100% - 28px));
+  padding: 10px 12px;
+}
+.placement-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: #18375c;
+  color: #86c7ff;
+  box-shadow: inset 0 0 0 1px #315b87;
+}
+#placement-hint > div {
+  min-width: 0;
+  flex: 1;
+}
+#placement-hint strong,
+#placement-hint span {
+  display: block;
+}
+#placement-title {
+  color: #f4f8ff;
+  font-size: 11px;
+}
+#placement-copy {
+  margin-top: 2px;
+  color: #91a5c0;
+  font-size: 9px;
+  line-height: 1.35;
+}
+#placement-cancel,
+#action-undo {
+  flex: 0 0 auto;
+  min-height: 30px;
+  padding: 5px 9px;
+  border: 1px solid #355174;
+  border-radius: 8px;
+  background: #14253b;
+  color: #a9c7e9;
+  font-size: 9px;
+  font-weight: 650;
+}
+#placement-cancel:hover,
+#action-undo:hover {
+  background: #1d3553;
+  color: #eff7ff;
+}
+#action-toast {
+  left: 50%;
+  bottom: 26px;
+  transform: translateX(-50%);
+  padding: 9px 10px 9px 13px;
+  color: #adbed4;
+  font-size: 10px;
+}
+#action-toast-copy {
+  white-space: nowrap;
+}
+#action-undo {
+  color: #8ec7ff;
+}
+@media (max-width: 650px) {
+  #placement-hint {
+    top: 10px;
+    min-width: 0;
+    width: calc(100% - 20px);
+  }
+  #placement-copy {
+    max-width: 190px;
+  }
+  #action-toast {
+    bottom: 58px;
+  }
+}
