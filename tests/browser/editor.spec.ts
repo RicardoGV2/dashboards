@@ -68,7 +68,8 @@ test("drag is one undo transaction, cancel does not mutate, zoom and culling", a
   await page.locator("#fit").click();
   await expect(page.locator(".canvas-node")).toBeVisible();
   const initialX = Number(await page.locator("#x").inputValue());
-  const zoom = Number((await page.locator("#zoom").textContent())!.replace("%", "")) / 100;
+  const zoom =
+    Number((await page.locator("#zoom").textContent())!.replace("%", "")) / 100;
   let box = (await page.locator(".canvas-node").boundingBox())!;
   await page.mouse.move(box.x + 40, box.y + 40);
   await page.mouse.down();
@@ -322,11 +323,13 @@ test("dark visual theme is active before finance is added", async ({
   await expect(page.locator("#flow-banner")).toBeVisible();
 });
 
-
 test("placement preview prevents accidental duplicate finance scenes and supports one-step undo", async ({
   page,
 }, testInfo) => {
-  test.skip(testInfo.project.name === "mobile", "Desktop hover placement check");
+  test.skip(
+    testInfo.project.name === "mobile",
+    "Desktop hover placement check",
+  );
 
   await page.locator("#add-finance").click();
   await expect(page.locator("#placement-hint")).toBeVisible();

@@ -122,16 +122,8 @@ function movePlacementTo(target: Point) {
     x: (bounds.minX + bounds.maxX) / 2,
     y: (bounds.minY + bounds.maxY) / 2,
   };
-  const dx = clamp(
-    target.x - center.x,
-    -1e6 - bounds.minX,
-    1e6 - bounds.maxX,
-  );
-  const dy = clamp(
-    target.y - center.y,
-    -1e6 - bounds.minY,
-    1e6 - bounds.maxY,
-  );
+  const dx = clamp(target.x - center.x, -1e6 - bounds.minX, 1e6 - bounds.maxX);
+  const dy = clamp(target.y - center.y, -1e6 - bounds.minY, 1e6 - bounds.maxY);
   placement = {
     ...placement,
     nodes: placement.nodes.map((node) => ({
@@ -179,7 +171,9 @@ function startPlacement(draft: PlacementDraft, sourceSelector: string) {
   document
     .querySelectorAll<HTMLElement>(".is-placing")
     .forEach((element) => element.classList.remove("is-placing"));
-  document.querySelector<HTMLElement>(sourceSelector)?.classList.add("is-placing");
+  document
+    .querySelector<HTMLElement>(sourceSelector)
+    ?.classList.add("is-placing");
   $("placement-title").textContent = `Place ${draft.label}`;
   $("placement-copy").textContent =
     "Move the preview, then click or drag-and-release to place";
@@ -205,9 +199,7 @@ function commitPlacement() {
   const draft = placement;
   try {
     history.execute([
-      ...draft.assets.map(
-        (asset): Command => ({ type: "createAsset", asset }),
-      ),
+      ...draft.assets.map((asset): Command => ({ type: "createAsset", asset })),
       ...draft.nodes.map((node): Command => ({ type: "create", node })),
       ...draft.connections.map(
         (connection): Command => ({ type: "createConnection", connection }),
@@ -251,7 +243,9 @@ function render() {
   };
   const nodes = visibleNodes(projectedDoc);
   const previewIds = new Set(draftNodes.map((node) => node.id));
-  const financeMode = projectedDoc.nodes.some((node) => node.kind === "finance");
+  const financeMode = projectedDoc.nodes.some(
+    (node) => node.kind === "finance",
+  );
 
   renderConnections(
     $("connections") as unknown as SVGSVGElement,
@@ -270,7 +264,9 @@ function render() {
   );
 
   if (previewIds.size)
-    for (const element of document.querySelectorAll<HTMLElement>("#nodes [data-id]"))
+    for (const element of document.querySelectorAll<HTMLElement>(
+      "#nodes [data-id]",
+    ))
       if (previewIds.has(element.dataset.id ?? ""))
         element.classList.add("placement-preview");
 
