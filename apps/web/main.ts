@@ -105,6 +105,124 @@ function visibleConnections(document: CanvasDocument, nodes: CanvasNode[]) {
     (connection) => visible.has(connection.from) && visible.has(connection.to),
   );
 }
+
+function placementBounds(nodes: CanvasNode[]) {
+  return {
+    minX: Math.min(...nodes.map((node) => node.x)),
+    minY: Math.min(...nodes.map((node) => node.y)),
+    maxX: Math.max(...nodes.map((node) => node.x + node.width)),
+    maxY: Math.max(...nodes.map((node) => node.y + node.height)),
+  };
+}
+
+function movePlacementTo(target: Point) {
+  if (!placement?.nodes.length) return;
+  const bounds = placementBounds(placement.nodes);
+  const center = {
+    x: (bounds.minX + bounds.maxX) / 2,
+    y: (bounds.minY + bounds.maxY) / 2,
+  };
+  const dx = clamp(
+    target.x - center.x,
+    -1e6 - bounds.minX,
+    1e6 - bounds.maxX,
+  );
+  const dy = clamp(
+    target.y - center.y,
+    -1e6 - bounds.minY,
+    1e6 - bounds.maxY,
+  );
+  placement = {
+    ...placement,
+    nodes: placement.nodes.map((node) => ({
+      ...node,
+      x: node.x + dx,
+      y: node.y + dy,
+    })),
+  };
+  scheduleRender();
+}
+
+function clearPlacementUi() {
+  document.body.classList.remove("placement-mode");
+  document
+    .querySelectorAll<HTMLElement>(".is-placing")
+    .forEach((element) => element.classList.remove("is-placing"));
+  $("placement-hint").hidden = true;
+}
+
+function cancelPlacement(message = "Placement canceled") {
+  if (!placement) return;
+  placement = null;
+  placementPointer = null;
+  clearPlacementUi();
+  status(message);
+  scheduleRender();
+}
+
+function startPlacement(draft: PlacementDraft, sourceSelector: string) {
+  if (!ready) return;
+  cancelGesture();
+  if (
+    placement &&
+    placement.label === draft.label &&
+    document.querySelector(sourceSelector)?.classList.contains("is-placing")
+  ) {
+    status("Already placing this item. Move it and click to confirm.");
+    return;
+  }
+  placement = draft;
+  placementPointer = null;
+  selected = null;
+  document.body.classList.add("placement-mode");
+  document
+    .querySelectorAll<HTMLElement>(".is-placing")
+    .forEach((element) => element.classList.remove("is-placing"));
+  document.querySelector<HTMLElement>(sourceSelector)?.classList.add("is-placing");
+  $("placement-title").textContent = `Place ${draft.label}`;
+  $("placement-copy").textContent =
+    "Move the preview, then click or drag-and-release to place";
+  $("placement-hint").hidden = false;
+  status("Preview only · move it, then click to place · Esc cancels");
+  scheduleRender();
+}
+
+function hideUndoToast() {
+  window.clearTimeout(undoToastTimer);
+  $("action-toast").hidden = true;
+}
+
+function showUndoToast(label: string) {
+  window.clearTimeout(undoToastTimer);
+  $("action-toast-copy").textContent = `${label} placed`;
+  $("action-toast").hidden = false;
+  undoToastTimer = window.setTimeout(hideUndoToast, 7000);
+}
+
+function commitPlacement() {
+  if (!placement) return;
+  const draft = placement;
+  try {
+    history.execute([
+      ...draft.assets.map(
+        (asset): Command => ({ type: "createAsset", asset }),
+      ),
+      ...draft.nodes.map((node): Command => ({ type: "create", node })),
+      ...draft.connections.map(
+        (connection): Command => ({ type: "createConnection", connection }),
+      ),
+    ]);
+    placement = null;
+    placementPointer = null;
+    clearPlacementUi();
+    selected = draft.selectId;
+    changed();
+    showUndoToast(draft.label);
+  } catch (error) {
+    status((error as Error).message, true);
+    scheduleRender();
+  }
+}
 function status(message: string, error = false) {
   $("status").textContent = message;
   $("status").classList.toggle("error", error);
@@ -118,20 +236,42 @@ function scheduleRender() {
 }
 function render() {
   const doc = history.document;
-  const projected = preview
+  const committedNodes = preview
     ? doc.nodes.map((node) => (node.id === preview!.id ? preview! : node))
     : doc.nodes;
-  const projectedDoc = { ...doc, nodes: projected };
+  const draftNodes = placement?.nodes ?? [];
+  const draftConnections = placement?.connections ?? [];
+  const draftAssets = placement?.assets ?? [];
+  const projectedDoc: CanvasDocument = {
+    ...doc,
+    nodes: [...committedNodes, ...draftNodes],
+    connections: [...doc.connections, ...draftConnections],
+    assets: [...doc.assets, ...draftAssets],
+  };
   const nodes = visibleNodes(projectedDoc);
-  const financeMode = doc.nodes.some((node) => node.kind === "finance");
+  const previewIds = new Set(draftNodes.map((node) => node.id));
+  const financeMode = projectedDoc.nodes.some((node) => node.kind === "finance");
 
   renderConnections(
     $("connections") as unknown as SVGSVGElement,
     visibleConnections(projectedDoc, nodes),
     nodes,
     camera,
+    previewIds,
   );
-  renderNodes($("nodes"), nodes, doc.assets, camera, size(), selected);
+  renderNodes(
+    $("nodes"),
+    nodes,
+    projectedDoc.assets,
+    camera,
+    size(),
+    placement ? null : selected,
+  );
+
+  if (previewIds.size)
+    for (const element of document.querySelectorAll<HTMLElement>("#nodes [data-id]"))
+      if (previewIds.has(element.dataset.id ?? ""))
+        element.classList.add("placement-preview");
 
   document.body.classList.toggle("finance-mode", financeMode);
   $("flow-banner").hidden = !financeMode;
@@ -141,10 +281,11 @@ function render() {
   viewport.style.backgroundSize = `${step}px ${step}px`;
   viewport.style.backgroundPosition = `${-camera.x * camera.zoom}px ${-camera.y * camera.zoom}px`;
   $("zoom").textContent = `${Math.round(camera.zoom * 100)}%`;
-  $("welcome").hidden = doc.nodes.length > 0;
-  $("count").textContent =
-    `${doc.nodes.length} object${doc.nodes.length === 1 ? "" : "s"}`;
-  ($("undo") as HTMLButtonElement).disabled = !history.canUndo;
+  $("welcome").hidden = projectedDoc.nodes.length > 0;
+  $("count").textContent = placement
+    ? `${doc.nodes.length} object${doc.nodes.length === 1 ? "" : "s"} · placing ${placement.label}`
+    : `${doc.nodes.length} object${doc.nodes.length === 1 ? "" : "s"}`;
+  ($("undo") as HTMLButtonElement).disabled = !history.canUndo && !placement;
   ($("redo") as HTMLButtonElement).disabled = !history.canRedo;
 }
 
