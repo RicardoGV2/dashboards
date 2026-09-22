@@ -11,7 +11,10 @@ import {
   validateDocument,
 } from "../packages/document/index.ts";
 import { History, applyCommands } from "../packages/engine/history/index.ts";
-import { createNode } from "../packages/widgets/index.ts";
+import {
+  createImageNode,
+  createNode,
+} from "../packages/widgets/index.ts";
 test("world/screen inverse across supported coordinate and zoom bounds", () => {
   for (const zoom of [0.1, 0.25, 1, 4])
     for (const x of [-1e6, -10.7, 0, 17, 1e6]) {
@@ -75,7 +78,7 @@ test("import roundtrip, future format and hostile fields", () => {
   const doc = emptyDocument();
   doc.nodes.push(createNode("text", -500, 300));
   assert.deepEqual(parseDocument(JSON.stringify(doc)), doc);
-  assert.throws(() => validateDocument({ ...doc, schemaVersion: 2 }));
+  assert.throws(() => validateDocument({ ...doc, schemaVersion: 3 }));
   assert.throws(() =>
     parseDocument(
       JSON.stringify({
@@ -96,7 +99,7 @@ test("import roundtrip, future format and hostile fields", () => {
       },
     ]),
   );
-  assert.throws(() => parseDocument("x".repeat(5_000_001)));
+  assert.throws(() => parseDocument("x".repeat(12_000_001)));
 });
 test("history retains bounded undo depth", () => {
   const h = new History(emptyDocument());
@@ -111,4 +114,90 @@ test("history retains bounded undo depth", () => {
   }
   assert.equal(undoCount, 50);
   assert.equal(h.document.nodes[0].x, 30);
+});
+
+
+test("legacy schema migrates without changing existing nodes", () => {
+  const node = createNode("note", 10, 20);
+  const legacy = {
+    schemaVersion: 1,
+    id: "legacy",
+    title: "Legacy workspace",
+    nodes: [node],
+  };
+  const migrated = validateDocument(legacy);
+  assert.equal(migrated.schemaVersion, 2);
+  assert.deepEqual(migrated.assets, []);
+  assert.equal(migrated.nodes[0].id, node.id);
+});
+
+test("image assets and cube animation survive validation and history", () => {
+  const png =
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9WlYvqsAAAAASUVORK5CYII=";
+  const asset = {
+    id: "asset-1",
+    kind: "image" as const,
+    name: "pixel.png",
+    mimeType: "image/png" as const,
+    dataUrl: `data:image/png;base64,${png}`,
+    width: 1,
+    height: 1,
+    bytes: 68,
+  };
+  const image = createImageNode(asset.id, asset.name, 20, 30, 160, 120);
+  const cube = createNode("cube", 400, 300);
+  const doc = applyCommands(emptyDocument(), [
+    { type: "createAsset", asset },
+    { type: "create", node: image },
+    { type: "create", node: cube },
+  ]);
+  assert.equal(doc.assets.length, 1);
+  assert.equal(doc.nodes[0].kind, "image");
+  assert.equal(doc.nodes[1].animation?.speed, 45);
+
+  const updated = applyCommands(doc, [
+    {
+      type: "update",
+      id: cube.id,
+      patch: {
+        color: "#ff3366",
+        animation: {
+          ...cube.animation!,
+          speed: 180,
+          direction: "counterclockwise",
+          axis: "z",
+          paused: true,
+          perspective: 900,
+        },
+      },
+    },
+  ]);
+  assert.equal(updated.nodes[1].color, "#ff3366");
+  assert.equal(updated.nodes[1].animation?.speed, 180);
+  assert.equal(updated.nodes[1].animation?.axis, "z");
+  assert.equal(updated.nodes[1].animation?.paused, true);
+  assert.deepEqual(parseDocument(JSON.stringify(updated)), updated);
+
+  assert.throws(() =>
+    validateDocument({
+      ...doc,
+      assets: [
+        {
+          ...asset,
+          mimeType: "image/svg+xml",
+          dataUrl: "data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=",
+        },
+      ],
+    }),
+  );
+  assert.throws(() =>
+    applyCommands(doc, [{ type: "deleteAsset", id: asset.id }]),
+  );
+
+  const cleaned = applyCommands(doc, [
+    { type: "delete", id: image.id },
+    { type: "deleteAsset", id: asset.id },
+  ]);
+  assert.equal(cleaned.assets.length, 0);
+  assert.equal(cleaned.nodes.some((node) => node.kind === "image"), false);
 });
