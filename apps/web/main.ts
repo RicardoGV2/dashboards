@@ -14,6 +14,7 @@ import {
   IMAGE_MIME_TYPES,
 } from "../../packages/document/index.ts";
 import type {
+  CanvasConnection,
   CanvasDocument,
   CanvasNode,
   CubeAnimation,
@@ -42,6 +43,18 @@ let ready = false,
   frame = 0,
   space = false;
 let preview: CanvasNode | null = null;
+
+interface PlacementDraft {
+  label: string;
+  nodes: CanvasNode[];
+  connections: CanvasConnection[];
+  assets: ImageAsset[];
+  selectId: string;
+}
+
+let placement: PlacementDraft | null = null;
+let placementPointer: number | null = null;
+let undoToastTimer = 0;
 let saveQueue: Promise<void> = Promise.resolve();
 let saveRevision = 0;
 const pointers = new Map<number, Point>();
