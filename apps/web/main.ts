@@ -10,12 +10,23 @@ import {
   emptyDocument,
   parseDocument,
   MAX_FILE_BYTES,
+  MAX_IMAGE_BYTES,
+  IMAGE_MIME_TYPES,
 } from "../../packages/document/index.ts";
-import type { CanvasNode, NodeKind } from "../../packages/document/index.ts";
+import type {
+  CanvasNode,
+  CubeAnimation,
+  ImageAsset,
+  ImageMimeType,
+} from "../../packages/document/index.ts";
 import { History } from "../../packages/engine/history/index.ts";
 import type { Command } from "../../packages/engine/history/index.ts";
 import { renderNodes } from "../../packages/engine/renderer/index.ts";
-import { createNode } from "../../packages/widgets/index.ts";
+import {
+  createImageNode,
+  createNode,
+} from "../../packages/widgets/index.ts";
+import type { CreateableNodeKind } from "../../packages/widgets/index.ts";
 import * as storage from "../../packages/storage/index.ts";
 const $ = <T extends HTMLElement = HTMLElement>(id: string) =>
   document.getElementById(id) as T;
@@ -65,7 +76,7 @@ function render() {
   const nodes = preview
     ? doc.nodes.map((n) => (n.id === preview!.id ? preview! : n))
     : doc.nodes;
-  renderNodes($("nodes"), nodes, camera, size(), selected);
+  renderNodes($("nodes"), nodes, doc.assets, camera, size(), selected);
   const step = 24 * camera.zoom * (camera.zoom < 0.3 ? 5 : 1);
   viewport.style.backgroundSize = `${step}px ${step}px`;
   viewport.style.backgroundPosition = `${-camera.x * camera.zoom}px ${-camera.y * camera.zoom}px`;
@@ -77,15 +88,24 @@ function render() {
   ($("redo") as HTMLButtonElement).disabled = !history.canRedo;
 }
 function refreshInspector() {
-  const nodes = history.document.nodes;
+  const doc = history.document;
+  const nodes = doc.nodes;
   const node = nodes.find((n) => n.id === selected);
   if (!node) selected = null;
   $("inspector").hidden = !node;
   $("aside-empty").hidden = nodes.length > 0;
+
   const fragment = document.createDocumentFragment();
+  const icons: Record<CanvasNode["kind"], string> = {
+    note: "▤",
+    text: "T",
+    shape: "□",
+    image: "▧",
+    cube: "◇",
+  };
   for (const n of nodes) {
     const button = document.createElement("button");
-    button.textContent = `${n.kind === "shape" ? "□" : "▤"}  ${n.title || n.kind}`;
+    button.textContent = `${icons[n.kind]}  ${n.title || n.kind}`;
     button.setAttribute("aria-pressed", String(n.id === selected));
     button.onclick = () => {
       select(n.id);
@@ -101,6 +121,40 @@ function refreshInspector() {
     fragment.append(button);
   }
   $("object-list").replaceChildren(fragment);
+
+  const contentField = $("content-field");
+  contentField.hidden = !node || node.kind === "cube";
+  $("content-label").textContent =
+    node?.kind === "image" ? "Description / alt text" : "Content";
+  const colorField = document.querySelector<HTMLElement>(".color-label");
+  if (colorField) colorField.hidden = !node || node.kind === "image";
+
+  const imageInfo = $("image-info");
+  imageInfo.hidden = node?.kind !== "image";
+  if (node?.kind === "image") {
+    const asset = doc.assets.find((item) => item.id === node.assetId);
+    imageInfo.textContent = asset
+      ? `${asset.name} · ${asset.width}×${asset.height}px · ${Math.round(asset.bytes / 1024)} KB`
+      : "Image asset unavailable";
+  } else imageInfo.textContent = "";
+
+  const animationControls = $("animation-controls");
+  animationControls.hidden = node?.kind !== "cube";
+  if (node?.kind === "cube" && node.animation) {
+    const animation = node.animation;
+    $<HTMLInputElement>("animation-speed").value = String(animation.speed);
+    $("animation-speed-value").textContent = `${animation.speed}°/s`;
+    $<HTMLSelectElement>("animation-direction").value = animation.direction;
+    $<HTMLSelectElement>("animation-axis").value = animation.axis;
+    $<HTMLInputElement>("animation-perspective").value = String(
+      animation.perspective,
+    );
+    $("animation-perspective-value").textContent =
+      `${animation.perspective}px`;
+    $<HTMLInputElement>("animation-paused").checked = animation.paused;
+    $("animation-state").textContent = animation.paused ? "Paused" : "Running";
+  }
+
   if (node)
     for (const key of [
       "title",
@@ -146,7 +200,7 @@ function execute(commands: Command[]) {
     refreshInspector();
   }
 }
-function add(kind: NodeKind) {
+function add(kind: CreateableNodeKind) {
   if (!ready) return;
   const s = size();
   const p = screenToWorld({ x: s.x / 2, y: s.y / 2 }, camera);
@@ -158,6 +212,114 @@ function add(kind: NodeKind) {
   selected = node.id;
   execute([{ type: "create", node }]);
 }
+
+function readImageDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () =>
+      typeof reader.result === "string"
+        ? resolve(reader.result)
+        : reject(new Error("Could not read image."));
+    reader.onerror = () => reject(reader.error ?? new Error("Could not read image."));
+    reader.readAsDataURL(file);
+  });
+}
+
+function readImageSize(file: File): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve({ width: image.naturalWidth, height: image.naturalHeight });
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("The selected file is not a readable image."));
+    };
+    image.src = url;
+  });
+}
+
+async function addImage(file: File) {
+  if (!ready) return;
+  if (!IMAGE_MIME_TYPES.includes(file.type as ImageMimeType))
+    throw new Error("Use PNG, JPEG, WebP, or GIF images.");
+  if (file.size < 1 || file.size > MAX_IMAGE_BYTES)
+    throw new Error("Images must be 2 MB or smaller.");
+
+  const [dataUrl, dimensions] = await Promise.all([
+    readImageDataUrl(file),
+    readImageSize(file),
+  ]);
+  const asset: ImageAsset = {
+    id: crypto.randomUUID(),
+    kind: "image",
+    name: (file.name || "Image").slice(0, 200),
+    mimeType: file.type as ImageMimeType,
+    dataUrl,
+    width: dimensions.width,
+    height: dimensions.height,
+    bytes: file.size,
+  };
+
+  const scale = Math.min(
+    1,
+    520 / dimensions.width,
+    360 / dimensions.height,
+  );
+  const width = Math.max(80, Math.round(dimensions.width * scale));
+  const height = Math.max(60, Math.round(dimensions.height * scale));
+  const viewportSize = size();
+  const center = screenToWorld(
+    { x: viewportSize.x / 2, y: viewportSize.y / 2 },
+    camera,
+  );
+  const node = createImageNode(
+    asset.id,
+    asset.name,
+    clamp(center.x - width / 2, -1e6, 1e6),
+    clamp(center.y - height / 2, -1e6, 1e6),
+    width,
+    height,
+  );
+  selected = node.id;
+  execute([
+    { type: "createAsset", asset },
+    { type: "create", node },
+  ]);
+}
+
+function deleteSelected() {
+  if (!selected) return;
+  const doc = history.document;
+  const node = doc.nodes.find((item) => item.id === selected);
+  if (!node) return;
+  const commands: Command[] = [{ type: "delete", id: node.id }];
+  if (
+    node.kind === "image" &&
+    node.assetId &&
+    !doc.nodes.some(
+      (item) => item.id !== node.id && item.assetId === node.assetId,
+    )
+  )
+    commands.push({ type: "deleteAsset", id: node.assetId });
+  execute(commands);
+}
+
+function updateCubeAnimation(patch: Partial<CubeAnimation>) {
+  if (!selected) return;
+  const node = history.document.nodes.find((item) => item.id === selected);
+  if (node?.kind !== "cube" || !node.animation) return;
+  execute([
+    {
+      type: "update",
+      id: node.id,
+      patch: { animation: { ...node.animation, ...patch } },
+    },
+  ]);
+}
+
 function setTool(value: typeof tool) {
   tool = value;
   $("select").setAttribute("aria-pressed", String(value === "select"));
@@ -317,7 +479,8 @@ viewport.addEventListener(
   { passive: false },
 );
 for (const button of document.querySelectorAll<HTMLButtonElement>("[data-add]"))
-  button.onclick = () => add(button.dataset.add as NodeKind);
+  button.onclick = () => add(button.dataset.add as CreateableNodeKind);
+$("add-image").onclick = () => $<HTMLInputElement>("image-file").click();
 $("start").onclick = () => add("note");
 $("select").onclick = () => setTool("select");
 $("hand").onclick = () => setTool("pan");
@@ -331,9 +494,7 @@ $("redo").onclick = () => {
   history.redo();
   changed();
 };
-$("delete").onclick = () => {
-  if (selected) execute([{ type: "delete", id: selected }]);
-};
+$("delete").onclick = deleteSelected;
 $("fit").onclick = fit;
 for (const [id, factor] of [
   ["zoom-in", 1.2],
@@ -363,6 +524,45 @@ for (const key of [
       : input.value;
     execute([{ type: "update", id: selected, patch: { [key]: value } }]);
   });
+$<HTMLInputElement>("animation-speed").addEventListener("input", (event) => {
+  $("animation-speed-value").textContent =
+    `${(event.target as HTMLInputElement).value}°/s`;
+});
+$<HTMLInputElement>("animation-speed").addEventListener("change", (event) => {
+  updateCubeAnimation({ speed: Number((event.target as HTMLInputElement).value) });
+});
+$<HTMLSelectElement>("animation-direction").addEventListener(
+  "change",
+  (event) => {
+    updateCubeAnimation({
+      direction: (event.target as HTMLSelectElement)
+        .value as CubeAnimation["direction"],
+    });
+  },
+);
+$<HTMLSelectElement>("animation-axis").addEventListener("change", (event) => {
+  updateCubeAnimation({
+    axis: (event.target as HTMLSelectElement).value as CubeAnimation["axis"],
+  });
+});
+$<HTMLInputElement>("animation-perspective").addEventListener(
+  "input",
+  (event) => {
+    $("animation-perspective-value").textContent =
+      `${(event.target as HTMLInputElement).value}px`;
+  },
+);
+$<HTMLInputElement>("animation-perspective").addEventListener(
+  "change",
+  (event) => {
+    updateCubeAnimation({
+      perspective: Number((event.target as HTMLInputElement).value),
+    });
+  },
+);
+$<HTMLInputElement>("animation-paused").addEventListener("change", (event) => {
+  updateCubeAnimation({ paused: (event.target as HTMLInputElement).checked });
+});
 window.addEventListener("keydown", (e) => {
   if (
     (e.target as HTMLElement).closest(
@@ -386,7 +586,7 @@ window.addEventListener("keydown", (e) => {
   } else if (e.target === viewport && !modifier) {
     if (e.key === "Delete" || e.key === "Backspace") {
       e.preventDefault();
-      if (selected) execute([{ type: "delete", id: selected }]);
+      deleteSelected();
     } else if (e.key.toLowerCase() === "v") setTool("select");
     else if (e.key.toLowerCase() === "h") setTool("pan");
     else if (e.key.toLowerCase() === "n") add("note");
@@ -440,7 +640,7 @@ $("file").addEventListener("change", async () => {
   if (!file || !ready) return;
   try {
     if (file.size > MAX_FILE_BYTES)
-      throw new Error("Document exceeds the 5 MB import limit.");
+      throw new Error("Document exceeds the 12 MB import limit.");
     const imported = parseDocument(await file.text());
     cancelGesture();
     history.replace(imported);
@@ -452,6 +652,18 @@ $("file").addEventListener("change", async () => {
   }
   input.value = "";
 });
+$("image-file").addEventListener("change", async () => {
+  const input = $<HTMLInputElement>("image-file");
+  const image = input.files?.[0];
+  if (!image || !ready) return;
+  try {
+    await addImage(image);
+  } catch (error) {
+    status(`Image failed: ${(error as Error).message}`, true);
+  }
+  input.value = "";
+});
+
 new ResizeObserver(scheduleRender).observe(viewport);
 async function boot() {
   try {
