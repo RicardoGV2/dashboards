@@ -498,15 +498,26 @@ function execute(commands: Command[]) {
 }
 function add(kind: CreateableNodeKind) {
   if (!ready) return;
-  const s = size();
-  const p = screenToWorld({ x: s.x / 2, y: s.y / 2 }, camera);
+  const viewportSize = size();
+  const p = screenToWorld(
+    { x: viewportSize.x / 2, y: viewportSize.y / 2 },
+    camera,
+  );
   const node = createNode(
     kind,
     clamp(p.x - 130, -1e6, 1e6),
     clamp(p.y - 100, -1e6, 1e6),
   );
-  selected = node.id;
-  execute([{ type: "create", node }]);
+  startPlacement(
+    {
+      label: node.title,
+      nodes: [node],
+      connections: [],
+      assets: [],
+      selectId: node.id,
+    },
+    `[data-add="${kind}"]`,
+  );
 }
 
 function focusNodes(nodes: CanvasNode[]) {
@@ -534,16 +545,26 @@ function focusNodes(nodes: CanvasNode[]) {
 
 function addFinanceDemo() {
   if (!ready) return;
-  const s = size();
-  const center = screenToWorld({ x: s.x / 2, y: s.y / 2 }, camera);
+  if (placement?.label === "Finance map") {
+    status("Finance preview is already active. Move it and click to place.");
+    return;
+  }
+  const viewportSize = size();
+  const center = screenToWorld(
+    { x: viewportSize.x / 2, y: viewportSize.y / 2 },
+    camera,
+  );
   const scene = createFinanceDemo(center.x, center.y);
-  selected = scene.personIds[0];
-  execute([
-    ...scene.nodes.map((node): Command => ({ type: "create", node })),
-    ...scene.connections.map(
-      (connection): Command => ({ type: "createConnection", connection }),
-    ),
-  ]);
+  startPlacement(
+    {
+      label: "Finance map",
+      nodes: scene.nodes,
+      connections: scene.connections,
+      assets: [],
+      selectId: scene.personIds[0],
+    },
+    "#add-finance",
+  );
   focusNodes(scene.nodes);
 }
 
@@ -614,11 +635,16 @@ async function addImage(file: File) {
     width,
     height,
   );
-  selected = node.id;
-  execute([
-    { type: "createAsset", asset },
-    { type: "create", node },
-  ]);
+  startPlacement(
+    {
+      label: "Image",
+      nodes: [node],
+      connections: [],
+      assets: [asset],
+      selectId: node.id,
+    },
+    "#add-image",
+  );
 }
 
 function deleteSelected() {
