@@ -12,6 +12,7 @@ import {
 } from "../packages/document/index.ts";
 import { History, applyCommands } from "../packages/engine/history/index.ts";
 import { createImageNode, createNode } from "../packages/widgets/index.ts";
+import { createFinanceDemo } from "../packages/finance/index.ts";
 test("world/screen inverse across supported coordinate and zoom bounds", () => {
   for (const zoom of [0.1, 0.25, 1, 4])
     for (const x of [-1e6, -10.7, 0, 17, 1e6]) {
@@ -75,7 +76,7 @@ test("import roundtrip, future format and hostile fields", () => {
   const doc = emptyDocument();
   doc.nodes.push(createNode("text", -500, 300));
   assert.deepEqual(parseDocument(JSON.stringify(doc)), doc);
-  assert.throws(() => validateDocument({ ...doc, schemaVersion: 3 }));
+  assert.throws(() => validateDocument({ ...doc, schemaVersion: 4 }));
   assert.throws(() =>
     parseDocument(
       JSON.stringify({
@@ -122,7 +123,7 @@ test("legacy schema migrates without changing existing nodes", () => {
     nodes: [node],
   };
   const migrated = validateDocument(legacy);
-  assert.equal(migrated.schemaVersion, 2);
+  assert.equal(migrated.schemaVersion, 3);
   assert.deepEqual(migrated.assets, []);
   assert.equal(migrated.nodes[0].id, node.id);
 });
@@ -197,6 +198,83 @@ test("image assets and cube animation survive validation and history", () => {
   assert.equal(cleaned.assets.length, 0);
   assert.equal(
     cleaned.nodes.some((node) => node.kind === "image"),
+    false,
+  );
+});
+
+test("version 2 documents migrate with empty connections", () => {
+  const current = emptyDocument();
+  const legacyV2 = {
+    schemaVersion: 2,
+    id: current.id,
+    title: current.title,
+    nodes: [createNode("shape", 10, 20)],
+    assets: [],
+  };
+  const migrated = validateDocument(legacyV2);
+  assert.equal(migrated.schemaVersion, 3);
+  assert.deepEqual(migrated.connections, []);
+  assert.equal(migrated.nodes[0].kind, "shape");
+});
+
+test("finance demo creates reusable people, banks and valid animated connections", () => {
+  const scene = createFinanceDemo(0, 0);
+  assert.equal(scene.personIds.length, 2);
+  assert.ok(scene.nodes.length >= 10);
+  assert.ok(scene.connections.length >= 10);
+
+  const people = scene.nodes.filter(
+    (node) => node.kind === "finance" && node.finance?.role === "person",
+  );
+  const banks = scene.nodes.filter(
+    (node) => node.kind === "finance" && node.finance?.role === "bank",
+  );
+  assert.equal(people.length, 2);
+  assert.equal(banks.length, 4);
+  assert.ok(
+    scene.connections.some(
+      (connection) => connection.kind === "incoming" && connection.animated,
+    ),
+  );
+  assert.ok(
+    scene.connections.some(
+      (connection) => connection.kind === "outgoing" && connection.animated,
+    ),
+  );
+
+  const doc = applyCommands(emptyDocument(), [
+    ...scene.nodes.map((node) => ({ type: "create" as const, node })),
+    ...scene.connections.map((connection) => ({
+      type: "createConnection" as const,
+      connection,
+    })),
+  ]);
+  assert.equal(doc.schemaVersion, 3);
+  assert.equal(doc.connections.length, scene.connections.length);
+
+  const firstPerson = people[0];
+  const childIds = new Set(
+    doc.nodes
+      .filter((node) => node.finance?.ownerId === firstPerson.id)
+      .map((node) => node.id),
+  );
+  const deleteCommands = [
+    ...[...childIds].map((id) => ({ type: "delete" as const, id })),
+    { type: "delete" as const, id: firstPerson.id },
+  ];
+  const afterDelete = applyCommands(doc, deleteCommands);
+  assert.equal(
+    afterDelete.connections.some(
+      (connection) =>
+        connection.from === firstPerson.id ||
+        connection.to === firstPerson.id ||
+        childIds.has(connection.from) ||
+        childIds.has(connection.to),
+    ),
+    false,
+  );
+  assert.equal(
+    afterDelete.nodes.some((node) => node.finance?.ownerId === firstPerson.id),
     false,
   );
 });

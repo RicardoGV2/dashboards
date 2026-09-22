@@ -14,6 +14,7 @@ import {
   IMAGE_MIME_TYPES,
 } from "../../packages/document/index.ts";
 import type {
+  CanvasDocument,
   CanvasNode,
   CubeAnimation,
   ImageAsset,
@@ -21,9 +22,13 @@ import type {
 } from "../../packages/document/index.ts";
 import { History } from "../../packages/engine/history/index.ts";
 import type { Command } from "../../packages/engine/history/index.ts";
-import { renderNodes } from "../../packages/engine/renderer/index.ts";
+import {
+  renderConnections,
+  renderNodes,
+} from "../../packages/engine/renderer/index.ts";
 import { createImageNode, createNode } from "../../packages/widgets/index.ts";
 import type { CreateableNodeKind } from "../../packages/widgets/index.ts";
+import { createFinanceDemo } from "../../packages/finance/index.ts";
 import * as storage from "../../packages/storage/index.ts";
 const $ = <T extends HTMLElement = HTMLElement>(id: string) =>
   document.getElementById(id) as T;
@@ -57,6 +62,36 @@ const point = (e: PointerEvent | WheelEvent): Point => {
   const r = viewport.getBoundingClientRect();
   return { x: e.clientX - r.left, y: e.clientY - r.top };
 };
+
+function formatMoney(cents: number) {
+  return new Intl.NumberFormat("en-IE", {
+    style: "currency",
+    currency: "EUR",
+    minimumFractionDigits: cents % 100 === 0 ? 0 : 2,
+  }).format(cents / 100);
+}
+
+function visibleNodes(document: CanvasDocument): CanvasNode[] {
+  const expanded = new Map(
+    document.nodes
+      .filter(
+        (node) => node.kind === "finance" && node.finance?.role === "person",
+      )
+      .map((node) => [node.id, node.finance?.expanded !== false]),
+  );
+  return document.nodes.filter((node) => {
+    if (node.kind !== "finance" || node.finance?.role === "person") return true;
+    if (!node.finance?.ownerId) return true;
+    return expanded.get(node.finance.ownerId) !== false;
+  });
+}
+
+function visibleConnections(document: CanvasDocument, nodes: CanvasNode[]) {
+  const visible = new Set(nodes.map((node) => node.id));
+  return document.connections.filter(
+    (connection) => visible.has(connection.from) && visible.has(connection.to),
+  );
+}
 function status(message: string, error = false) {
   $("status").textContent = message;
   $("status").classList.toggle("error", error);
@@ -70,23 +105,131 @@ function scheduleRender() {
 }
 function render() {
   const doc = history.document;
-  const nodes = preview
-    ? doc.nodes.map((n) => (n.id === preview!.id ? preview! : n))
+  const projected = preview
+    ? doc.nodes.map((node) => (node.id === preview!.id ? preview! : node))
     : doc.nodes;
+  const projectedDoc = { ...doc, nodes: projected };
+  const nodes = visibleNodes(projectedDoc);
+  const financeMode = doc.nodes.some((node) => node.kind === "finance");
+
+  renderConnections(
+    $("connections") as unknown as SVGSVGElement,
+    visibleConnections(projectedDoc, nodes),
+    nodes,
+    camera,
+  );
   renderNodes($("nodes"), nodes, doc.assets, camera, size(), selected);
+
+  document.body.classList.toggle("finance-mode", financeMode);
+  $("flow-banner").hidden = !financeMode;
+  $("flow-legend").hidden = !financeMode;
+
   const step = 24 * camera.zoom * (camera.zoom < 0.3 ? 5 : 1);
   viewport.style.backgroundSize = `${step}px ${step}px`;
   viewport.style.backgroundPosition = `${-camera.x * camera.zoom}px ${-camera.y * camera.zoom}px`;
   $("zoom").textContent = `${Math.round(camera.zoom * 100)}%`;
-  $("welcome").hidden = nodes.length > 0;
+  $("welcome").hidden = doc.nodes.length > 0;
   $("count").textContent =
-    `${nodes.length} object${nodes.length === 1 ? "" : "s"}`;
+    `${doc.nodes.length} object${doc.nodes.length === 1 ? "" : "s"}`;
   ($("undo") as HTMLButtonElement).disabled = !history.canUndo;
   ($("redo") as HTMLButtonElement).disabled = !history.canRedo;
 }
+
+function renderFinanceDetails(node: CanvasNode, doc: CanvasDocument) {
+  const host = $("finance-details");
+  host.replaceChildren();
+  host.hidden = node.kind !== "finance";
+  if (node.kind !== "finance" || !node.finance) return;
+
+  const finance = node.finance;
+  const heading = document.createElement("div");
+  heading.className = "finance-inspector-heading";
+  const role = document.createElement("span");
+  role.className = "finance-role-pill";
+  role.textContent = finance.role;
+  const scene = document.createElement("span");
+  scene.className = "finance-demo-pill";
+  scene.textContent = "Visual demo";
+  heading.append(role, scene);
+  host.append(heading);
+
+  const addRow = (label: string, value: string, tone = "") => {
+    const row = document.createElement("div");
+    row.className = `finance-inspector-row ${tone}`;
+    const name = document.createElement("span");
+    name.textContent = label;
+    const amount = document.createElement("strong");
+    amount.textContent = value;
+    row.append(name, amount);
+    host.append(row);
+  };
+
+  if (finance.role === "person") {
+    const owned = doc.nodes.filter(
+      (item) => item.kind === "finance" && item.finance?.ownerId === node.id,
+    );
+    const banks = owned.filter((item) => item.finance?.role === "bank");
+    const income = owned
+      .filter((item) => item.finance?.role === "source")
+      .reduce((sum, item) => sum + (item.finance?.amountCents ?? 0), 0);
+    const spending = owned
+      .filter(
+        (item) =>
+          item.finance?.role === "destination" &&
+          (item.finance?.amountCents ?? 0) < 0,
+      )
+      .reduce((sum, item) => sum + Math.abs(item.finance?.amountCents ?? 0), 0);
+    const balance = banks.reduce(
+      (sum, item) => sum + (item.finance?.amountCents ?? 0),
+      0,
+    );
+    addRow("Total balance", formatMoney(balance), "positive");
+    addRow("Monthly income", formatMoney(income), "positive");
+    addRow("Mapped spending", formatMoney(spending), "negative");
+
+    const section = document.createElement("div");
+    section.className = "finance-inspector-section";
+    const title = document.createElement("strong");
+    title.textContent = `Banks (${banks.length})`;
+    section.append(title);
+    for (const bank of banks) {
+      const item = document.createElement("div");
+      item.className = "finance-bank-row";
+      const badge = document.createElement("span");
+      badge.className = "mini-bank-badge";
+      badge.textContent = bank.finance?.icon ?? "B";
+      const copy = document.createElement("span");
+      copy.textContent = `${bank.title} · ${bank.text}`;
+      const value = document.createElement("strong");
+      value.textContent = formatMoney(bank.finance?.amountCents ?? 0);
+      item.append(badge, copy, value);
+      section.append(item);
+    }
+    host.append(section);
+
+    const hint = document.createElement("p");
+    hint.className = "finance-inspector-hint";
+    hint.textContent =
+      finance.expanded === false
+        ? "Utilities are collapsed. Expand this person on the canvas to reveal banks and money flows."
+        : "This reusable person module can later host banks, tasks, notes, calendars, goals and other utilities.";
+    host.append(hint);
+    return;
+  }
+
+  if (finance.amountCents !== undefined)
+    addRow(
+      finance.role === "bank" ? "Balance" : "Movement",
+      formatMoney(finance.amountCents),
+      finance.amountCents >= 0 ? "positive" : "negative",
+    );
+  if (finance.brand) addRow("Institution", finance.brand);
+  if (finance.category) addRow("Category", finance.category);
+  if (finance.cadence) addRow("Cadence", finance.cadence);
+}
 function refreshInspector() {
   const doc = history.document;
-  const nodes = doc.nodes;
+  const nodes = visibleNodes(doc);
   const node = nodes.find((n) => n.id === selected);
   if (!node) selected = null;
   $("inspector").hidden = !node;
@@ -99,6 +242,7 @@ function refreshInspector() {
     shape: "□",
     image: "▧",
     cube: "◇",
+    finance: "◉",
   };
   for (const n of nodes) {
     const button = document.createElement("button");
@@ -125,6 +269,8 @@ function refreshInspector() {
     node?.kind === "image" ? "Description / alt text" : "Content";
   const colorField = document.querySelector<HTMLElement>(".color-label");
   if (colorField) colorField.hidden = !node || node.kind === "image";
+
+  renderFinanceDetails(node ?? ({} as CanvasNode), doc);
 
   const imageInfo = $("image-info");
   imageInfo.hidden = node?.kind !== "image";
@@ -209,6 +355,44 @@ function add(kind: CreateableNodeKind) {
   execute([{ type: "create", node }]);
 }
 
+function focusNodes(nodes: CanvasNode[]) {
+  if (!nodes.length) return;
+  const s = size();
+  const minX = Math.min(...nodes.map((node) => node.x));
+  const minY = Math.min(...nodes.map((node) => node.y));
+  const maxX = Math.max(...nodes.map((node) => node.x + node.width));
+  const maxY = Math.max(...nodes.map((node) => node.y + node.height));
+  const zoom = clamp(
+    Math.min(
+      (s.x - 90) / Math.max(maxX - minX, 1),
+      (s.y - 90) / Math.max(maxY - minY, 1),
+    ),
+    0.1,
+    1.1,
+  );
+  camera = {
+    x: (minX + maxX) / 2 - s.x / (2 * zoom),
+    y: (minY + maxY) / 2 - s.y / (2 * zoom),
+    zoom,
+  };
+  scheduleRender();
+}
+
+function addFinanceDemo() {
+  if (!ready) return;
+  const s = size();
+  const center = screenToWorld({ x: s.x / 2, y: s.y / 2 }, camera);
+  const scene = createFinanceDemo(center.x, center.y);
+  selected = scene.personIds[0];
+  execute([
+    ...scene.nodes.map((node): Command => ({ type: "create", node })),
+    ...scene.connections.map(
+      (connection): Command => ({ type: "createConnection", connection }),
+    ),
+  ]);
+  focusNodes(scene.nodes);
+}
+
 function readImageDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -288,7 +472,16 @@ function deleteSelected() {
   const doc = history.document;
   const node = doc.nodes.find((item) => item.id === selected);
   if (!node) return;
-  const commands: Command[] = [{ type: "delete", id: node.id }];
+
+  const commands: Command[] = [];
+  if (node.kind === "finance" && node.finance?.role === "person") {
+    for (const child of doc.nodes.filter(
+      (item) => item.kind === "finance" && item.finance?.ownerId === node.id,
+    ))
+      commands.push({ type: "delete", id: child.id });
+  }
+  commands.push({ type: "delete", id: node.id });
+
   if (
     node.kind === "image" &&
     node.assetId &&
@@ -297,6 +490,8 @@ function deleteSelected() {
     )
   )
     commands.push({ type: "deleteAsset", id: node.assetId });
+
+  selected = null;
   execute(commands);
 }
 
@@ -320,28 +515,7 @@ function setTool(value: typeof tool) {
   viewport.classList.toggle("panning", value === "pan");
 }
 function fit() {
-  const nodes = history.document.nodes;
-  const s = size();
-  if (!nodes.length) {
-    camera = { x: 0, y: 0, zoom: 1 };
-    scheduleRender();
-    return;
-  }
-  const minX = Math.min(...nodes.map((n) => n.x)),
-    minY = Math.min(...nodes.map((n) => n.y));
-  const maxX = Math.max(...nodes.map((n) => n.x + n.width)),
-    maxY = Math.max(...nodes.map((n) => n.y + n.height));
-  const zoom = clamp(
-    Math.min((s.x - 80) / (maxX - minX), (s.y - 80) / (maxY - minY)),
-    0.1,
-    1.5,
-  );
-  camera = {
-    x: (minX + maxX) / 2 - s.x / (2 * zoom),
-    y: (minY + maxY) / 2 - s.y / (2 * zoom),
-    zoom,
-  };
-  scheduleRender();
+  focusNodes(visibleNodes(history.document));
 }
 function cancelGesture() {
   pointers.clear();
@@ -474,9 +648,33 @@ viewport.addEventListener(
 for (const button of document.querySelectorAll<HTMLButtonElement>("[data-add]"))
   button.onclick = () => add(button.dataset.add as CreateableNodeKind);
 $("add-image").onclick = () => $<HTMLInputElement>("image-file").click();
+$("add-finance").onclick = addFinanceDemo;
 $("start").onclick = () => add("note");
 $("select").onclick = () => setTool("select");
 $("hand").onclick = () => setTool("pan");
+$("nodes").addEventListener("click", (event) => {
+  const button = (event.target as HTMLElement).closest<HTMLButtonElement>(
+    "[data-finance-toggle]",
+  );
+  if (!button) return;
+  const node = history.document.nodes.find(
+    (item) => item.id === button.dataset.financeToggle,
+  );
+  if (node?.kind !== "finance" || node.finance?.role !== "person") return;
+  selected = node.id;
+  execute([
+    {
+      type: "update",
+      id: node.id,
+      patch: {
+        finance: {
+          ...node.finance,
+          expanded: node.finance.expanded === false,
+        },
+      },
+    },
+  ]);
+});
 $("undo").onclick = () => {
   cancelGesture();
   history.undo();

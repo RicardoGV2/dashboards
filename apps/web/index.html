@@ -36,7 +36,9 @@
             ><button id="add-image" title="Add image">
               ▧ <span>Image</span></button
             ><button data-add="cube" title="Add animated cube">
-              ◇ <span>Cube</span>
+              ◇ <span>Cube</span></button
+            ><button id="add-finance" title="Add finance flow demo">
+              ◉ <span>Finance</span>
             </button>
           </div>
           <div class="tool-group">
@@ -53,7 +55,19 @@
           aria-label="Infinite canvas. Drag empty space to pan. Select objects from the Objects list to edit with a keyboard."
           aria-describedby="instructions"
         >
+          <svg id="connections" aria-hidden="true"></svg>
           <div id="nodes"></div>
+          <div id="flow-banner" hidden>
+            <span class="flow-live-dot"></span>
+            <strong>Financial Flow</strong>
+            <span>Visual demo · animated money movement</span>
+          </div>
+          <div id="flow-legend" hidden>
+            <span><i class="legend-dot incoming"></i> Incoming</span>
+            <span><i class="legend-dot outgoing"></i> Outgoing</span>
+            <span><i class="legend-dot transfer"></i> Transfer</span>
+            <span><i class="legend-line structure"></i> Relationship</span>
+          </div>
           <div id="welcome">
             <span class="eyebrow">AN OPEN SPACE FOR YOUR IDEAS</span>
             <h1>Start anywhere.<br />Keep going.</h1>
@@ -82,6 +96,7 @@
               ><textarea id="text" rows="5" maxlength="20000"></textarea>
             </label>
             <div id="image-info" class="asset-info" hidden></div>
+            <div id="finance-details" class="finance-details" hidden></div>
             <div id="animation-controls" class="animation-controls" hidden>
               <div class="control-heading">
                 <span>Animation</span><span id="animation-state">Running</span>

@@ -56,6 +56,7 @@ test("drag is one undo transaction, cancel does not mutate, zoom and culling", a
   page,
 }) => {
   await page.locator("[data-add=shape]").click();
+  await expect(page.locator(".canvas-node")).toBeVisible();
   const initialX = Number(await page.locator("#x").inputValue());
   let box = (await page.locator(".canvas-node").boundingBox())!;
   await page.mouse.move(box.x + 40, box.y + 40);
@@ -65,6 +66,7 @@ test("drag is one undo transaction, cancel does not mutate, zoom and culling", a
   await expect(page.locator("#x")).toHaveValue(String(initialX + 70));
   await page.locator("#undo").click();
   await expect(page.locator("#x")).toHaveValue(String(initialX));
+  await expect(page.locator(".canvas-node")).toBeVisible();
   box = (await page.locator(".canvas-node").boundingBox())!;
   await page.mouse.move(box.x + 40, box.y + 40);
   await page.mouse.down();
@@ -214,10 +216,59 @@ test("image upload and animated cube controls persist", async ({ page }) => {
   const chunks = [];
   for await (const chunk of stream!) chunks.push(chunk);
   const exported = JSON.parse(Buffer.concat(chunks).toString());
-  expect(exported.schemaVersion).toBe(2);
+  expect(exported.schemaVersion).toBe(3);
   expect(exported.assets).toHaveLength(1);
   expect(exported.nodes.map((node: { kind: string }) => node.kind)).toEqual([
     "image",
     "cube",
   ]);
+});
+
+test("finance visualization adds animated flows without removing existing widgets", async ({
+  page,
+}) => {
+  await page.locator("#start").click();
+  await page.locator("#title").fill("Keep this note");
+  await page.locator("#title").press("Tab");
+
+  await page.locator("#add-finance").click();
+
+  await expect(page.locator("body")).toHaveClass(/finance-mode/);
+  await expect(page.locator(".canvas-node.finance-person")).toHaveCount(2);
+  await expect(page.locator(".canvas-node.finance-bank")).toHaveCount(4);
+  await expect(page.locator(".canvas-node.note")).toHaveCount(1);
+  await expect(page.locator("#flow-banner")).toBeVisible();
+  await expect(page.locator("#flow-legend")).toBeVisible();
+  await expect(page.locator("#connections .flow-connection")).toHaveCount(16);
+  await expect(
+    page.locator("#connections .flow-connection.incoming .flow-particle"),
+  ).toHaveCount(4);
+  await expect(
+    page.locator("#connections .flow-connection.outgoing"),
+  ).toHaveCount(7);
+
+  const ricardo = page.locator(".canvas-node.finance-person").filter({
+    hasText: "Ricardo",
+  });
+  await expect(ricardo).toBeVisible();
+  await ricardo.locator("[data-finance-toggle]").click();
+  await expect(page.locator(".canvas-node.finance-bank")).toHaveCount(2);
+  await expect(page.locator("#connections .flow-connection")).toHaveCount(8);
+
+  await ricardo.locator("[data-finance-toggle]").click();
+  await expect(page.locator(".canvas-node.finance-bank")).toHaveCount(4);
+
+  await page
+    .locator("#object-list button")
+    .filter({ hasText: "Ricardo" })
+    .click();
+  await expect(page.locator("#finance-details")).toBeVisible();
+  await expect(page.locator("#finance-details")).toContainText("Banks (2)");
+  await expect(page.locator("#finance-details")).toContainText("Total balance");
+
+  await expect(page.locator("#status")).toHaveText("Saved on this device");
+  await page.reload();
+  await expect(page.locator(".canvas-node.finance-person")).toHaveCount(2);
+  await expect(page.locator(".canvas-node.note")).toHaveCount(1);
+  await expect(page.locator("#connections .flow-connection")).toHaveCount(16);
 });
