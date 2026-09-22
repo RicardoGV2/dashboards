@@ -1195,113 +1195,113 @@ select {
   line-height: 1.5;
 }
 
-body.finance-mode {
+body.app-theme-dark {
   color: #dbe8f8;
   background: #070d17;
 }
-body.finance-mode header,
-body.finance-mode .tools,
-body.finance-mode aside,
-body.finance-mode footer {
+body.app-theme-dark header,
+body.app-theme-dark .tools,
+body.app-theme-dark aside,
+body.app-theme-dark footer {
   border-color: #1c2b40;
   background: #0b1320;
   color: #c6d5e8;
 }
-body.finance-mode .brand {
+body.app-theme-dark .brand {
   color: #f1f6ff;
 }
-body.finance-mode .brand-icon {
+body.app-theme-dark .brand-icon {
   color: #72a8ff;
 }
-body.finance-mode .alpha {
+body.app-theme-dark .alpha {
   border-color: #2a3950;
   color: #8699b5;
 }
-body.finance-mode .workspace-title,
-body.finance-mode footer {
+body.app-theme-dark .workspace-title,
+body.app-theme-dark footer {
   color: #8192aa;
 }
-body.finance-mode .primary {
+body.app-theme-dark .primary {
   background: #2764ce;
 }
-body.finance-mode button:hover {
+body.app-theme-dark button:hover {
   background: #16263d;
 }
-body.finance-mode .tools [aria-pressed="true"] {
+body.app-theme-dark .tools [aria-pressed="true"] {
   background: #182d49;
   color: #8ec6ff;
 }
-body.finance-mode #viewport {
+body.app-theme-dark #viewport {
   background-color: #07101c;
   background-image: radial-gradient(#26374c 1px, transparent 1px);
 }
-body.finance-mode aside {
+body.app-theme-dark aside {
   border-left-color: #1b2a3e;
 }
-body.finance-mode aside h2,
-body.finance-mode .aside-heading {
+body.app-theme-dark aside h2,
+body.app-theme-dark .aside-heading {
   color: #d8e5f7;
 }
-body.finance-mode #object-list button {
+body.app-theme-dark #object-list button {
   border-color: #1d2d43;
   color: #a8bad0;
 }
-body.finance-mode #object-list button[aria-pressed="true"] {
+body.app-theme-dark #object-list button[aria-pressed="true"] {
   background: #182a42;
   color: #e8f2ff;
 }
-body.finance-mode label {
+body.app-theme-dark label {
   color: #8395ae;
 }
-body.finance-mode input,
-body.finance-mode textarea,
-body.finance-mode select {
+body.app-theme-dark input,
+body.app-theme-dark textarea,
+body.app-theme-dark select {
   border-color: #26384f;
   background: #0d1828;
   color: #dce8f7;
 }
-body.finance-mode .finance-details {
+body.app-theme-dark .finance-details {
   border-color: #253750;
   background: #0d1929;
 }
-body.finance-mode .finance-inspector-row {
+body.app-theme-dark .finance-inspector-row {
   border-color: #1e3047;
   color: #8294ac;
 }
-body.finance-mode .finance-inspector-row strong,
-body.finance-mode .finance-inspector-section,
-body.finance-mode .finance-bank-row strong {
+body.app-theme-dark .finance-inspector-row strong,
+body.app-theme-dark .finance-inspector-section,
+body.app-theme-dark .finance-bank-row strong {
   color: #dbe7f5;
 }
-body.finance-mode .finance-inspector-hint {
+body.app-theme-dark .finance-inspector-hint {
   background: #111f34;
   color: #8ca0bd;
 }
-body.finance-mode .finance-role-pill {
+body.app-theme-dark .finance-role-pill {
   background: #17335c;
   color: #94c5ff;
 }
-body.finance-mode .finance-demo-pill {
+body.app-theme-dark .finance-demo-pill {
   background: #123728;
   color: #72e7af;
 }
-body.finance-mode .divider {
+body.app-theme-dark .divider {
   border-color: #1e2d41;
 }
-body.finance-mode .danger {
+body.app-theme-dark .danger {
   border-color: #4b2931;
   color: #ff9aa8;
 }
-body.finance-mode .canvas-node.text h2,
-body.finance-mode .canvas-node.text p {
+body.app-theme-dark .canvas-node.text h2,
+body.app-theme-dark .canvas-node.text p {
   color: #dce8f7;
 }
-body.finance-mode .canvas-node.text {
+body.app-theme-dark .canvas-node.text {
   background: #0d1724cc;
   border-color: #26374e;
 }
-body.finance-mode .animation-controls,
-body.finance-mode .asset-info {
+body.app-theme-dark .animation-controls,
+body.app-theme-dark .asset-info {
   border-color: #26384f;
   background: #101d2e;
   color: #9aacc2;
