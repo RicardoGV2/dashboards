@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f7f8f5" />
+    <title>Field — Infinite workspace</title>
+  </head>
+  <body>
+    <div id="app">
+      <header>
+        <a class="brand" href="#" aria-label="Field workspace"
+          ><span class="brand-icon">✳</span> field<span class="alpha"
+            >FOUNDATION</span
+          ></a
+        >
+        <div class="workspace-title">Your space for what’s next</div>
+        <div class="file-actions">
+          <button id="import">Open</button
+          ><button id="export" class="primary">Export</button>
+        </div>
+      </header>
+      <div class="workbench">
+        <nav class="tools" aria-label="Canvas tools">
+          <div class="tool-group">
+            <button id="select" aria-pressed="true" title="Select (V)">
+              ↖ <span>Select</span></button
+            ><button id="hand" aria-pressed="false" title="Pan (H)">
+              ✥ <span>Pan</span>
+            </button>
+          </div>
+          <div class="tool-group">
+            <button data-add="note">▤ <span>Note</span></button
+            ><button data-add="text">T <span>Text</span></button
+            ><button data-add="shape">□ <span>Shape</span></button>
+          </div>
+          <div class="tool-group">
+            <button id="undo" aria-label="Undo" title="Undo (Ctrl/⌘ Z)">
+              ↶</button
+            ><button id="redo" aria-label="Redo" title="Redo (Ctrl/⌘ Shift Z)">
+              ↷
+            </button>
+          </div>
+        </nav>
+        <main
+          id="viewport"
+          tabindex="0"
+          aria-label="Infinite canvas. Drag empty space to pan. Select objects from the Objects list to edit with a keyboard."
+          aria-describedby="instructions"
+        >
+          <div id="nodes"></div>
+          <div id="welcome">
+            <span class="eyebrow">AN OPEN SPACE FOR YOUR IDEAS</span>
+            <h1>Start anywhere.<br />Keep going.</h1>
+            <p>
+              A thought, a sketch, a new direction.<br />Give it a place, then
+              make room for more.
+            </p>
+            <button id="start" class="primary">+ Add your first note</button
+            ><small>Local to this browser · Yours to export</small>
+          </div>
+          <div class="canvas-tag">UNTITLED WORKSPACE <span> / 01</span></div>
+        </main>
+        <aside aria-label="Objects and properties">
+          <div class="aside-heading">
+            <span class="eyebrow">WORKSPACE</span
+            ><span id="count">0 objects</span>
+          </div>
+          <h2>Objects</h2>
+          <div id="object-list"></div>
+          <div id="inspector" hidden>
+            <div class="divider"></div>
+            <h2>Properties</h2>
+            <label>Title<input id="title" maxlength="200" /></label
+            ><label
+              >Content<textarea id="text" rows="5" maxlength="20000"></textarea>
+            </label>
+            <div class="dimensions">
+              <label
+                >X<input
+                  id="x"
+                  type="number"
+                  min="-1000000"
+                  max="1000000" /></label
+              ><label
+                >Y<input
+                  id="y"
+                  type="number"
+                  min="-1000000"
+                  max="1000000" /></label
+              ><label
+                >Width<input
+                  id="width"
+                  type="number"
+                  min="80"
+                  max="4000" /></label
+              ><label
+                >Height<input id="height" type="number" min="60" max="4000"
+              /></label>
+            </div>
+            <label class="color-label"
+              >Color<input id="color" type="color" /></label
+            ><button id="delete" class="danger">Delete object</button>
+          </div>
+          <p id="aside-empty">
+            Your ideas will appear here.<br />Add an object to get started.
+          </p>
+        </aside>
+      </div>
+      <footer>
+        <span id="status" role="status" aria-live="polite"
+          >Opening workspace…</span
+        ><span id="instructions"
+          >Drag to pan · Scroll to move · Ctrl/⌘ + scroll to zoom</span
+        >
+        <div class="zoom-controls">
+          <button id="zoom-out" aria-label="Zoom out">−</button
+          ><output id="zoom">100%</output
+          ><button id="zoom-in" aria-label="Zoom in">+</button
+          ><button id="fit">Fit</button>
+        </div>
+      </footer>
+    </div>
+    <input id="file" type="file" accept=".json,application/json" hidden />
+    <script type="module" src="/main.ts"></script>
+  </body>
+</html>

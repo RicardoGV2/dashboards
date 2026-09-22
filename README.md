@@ -1,34 +1,40 @@
-# Dashboards
+# Field · Infinite Dashboard
 
-A responsive sample analytics website built with plain HTML, CSS and JavaScript, ready for GitHub Pages.
+A browser-based spatial workspace with a portable document model and an owned canvas engine. See [plan.md](plan.md) for the architecture review, technology direction and phased roadmap.
 
-## Preview locally
+## Run the new editor
 
-Open `index.html` in your browser. No dependencies, installation or build step are required. You can also use a local static file server if you prefer.
+Node 22.6+ (CI uses Node 24):
 
-## Publish with GitHub Pages
+```sh
+npm ci
+npm run dev
+```
 
-1. Open this repository on GitHub and go to **Settings → Pages**.
-2. Under **Build and deployment**, choose **Deploy from a branch**.
-3. Select branch **`main`** and folder **`/ (root)`**, then click **Save**.
-4. After GitHub finishes publishing, your site should be available at **https://ricardogv2.github.io/dashboards/**. Check the Pages settings for the confirmed URL and deployment status.
+Open the local Vite URL. The new editor lives in `apps/web` and does not use the original sample dashboard.
 
-The site uses relative asset URLs (`./styles.css` and `./script.js`), so it works from the `/dashboards/` project path.
+```sh
+npm test              # model, transaction and camera invariants
+npm run build         # strict typecheck + /dashboards/ production assets
+npx playwright install chromium webkit
+npm run test:browser  # desktop, WebKit and phone-viewport tests
+```
 
-## Customize it
+Build output: `apps/web/dist`. The root sample and existing Pages configuration are retained for a later explicit deployment; this branch adds CI only.
 
-- **`index.html`** — page layout, copy and sections.
-- **`styles.css`** — colors (edit the `:root` variables), layout and responsive styles.
-- **`script.js`** — demo data in `DEMO` and `ACTIVITIES`, navigation, chart rendering, theme and CSV export.
+## Working now
 
-Everything displayed is **illustrative sample data**, not real visitor, revenue or conversion analytics. The time range scales example values; it does not fetch date-specific analytics. To show real data, replace the demo objects or adapt the rendering code to fetch from your own API. GitHub Pages hosts static content, so any private keys, credentials or sensitive data must stay on a separate, secured backend—not in this public repository.
+- Pan, anchored zoom, touch pinch, fit view, viewport culling.
+- Create/select/move/resize notes, text and shapes; edit via properties and accessible object list.
+- Atomic validated commands, undo/redo, IndexedDB autosave and JSON import/export.
+- Single-writer tab protection, import bounds and visible storage failures.
 
-## Features
+Drag empty space or use Pan. Scroll pans; Ctrl/⌘ + scroll zooms. Select canvas then V/H switches tools; N adds a note; arrow keys move a selected object (Shift = 10 units), or pan if none is selected. Ctrl/⌘ Z undoes; Shift adds redo. Escape cancels a drag. Properties offer keyboard-accessible size/position editing.
 
-- Four sample views: Overview, Audience, Revenue and Performance.
-- Responsive cards, a trend chart and breakdown bars.
-- 7-, 30- and 90-day example ranges.
-- Recent-activity search and per-view CSV export.
-- Dark-mode toggle, remembered locally when browser storage is available.
+## Honest limits
 
-No framework, dependency or tracking script is included.
+This is a foundation, not the completed dashboard. Charts, spreadsheet formulas, drawing, video, groups, AI integrations, collaboration, GPU rendering and full plugin execution remain roadmap work. Device emulation is not physical-device certification. The canvas has numerical bounds; storage is browser-local, not a backup or device sync. Export important work. No offline reload guarantee yet. Browsers without Web Locks require manual export; other open tabs cannot autosave while one tab owns the workspace.
+
+Unsupported document versions/types are rejected without replacing current work. The previous autosave is retained internally, but recovery UI and schema migrations remain milestone B.
+
+Architecture: `packages/document`, `packages/engine`, `packages/widgets`, `packages/storage`, `apps/web`. No AI provider keys or services are required. See [ADR 0001](docs/decisions/0001-portable-core.md).

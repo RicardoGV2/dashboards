@@ -1,3 +1,3 @@
-# Workflows (planned)
+# Workflows
 
-Placeholder for future GitHub Actions CI and an approved deployment workflow. This README is not an executable workflow; existing GitHub Pages settings remain unchanged. See [`../../plan.md`](../../plan.md).
+`ci.yml` installs dependencies, runs core tests, typechecks/builds and runs Chromium/WebKit browser tests. It does not deploy. Existing Pages settings are unchanged; a reviewed deployment workflow should upload `apps/web/dist` when publishing the editor is requested.

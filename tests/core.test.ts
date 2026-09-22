@@ -1,0 +1,114 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {
+  screenToWorld,
+  worldToScreen,
+  zoomAt,
+} from "../packages/engine/camera/index.ts";
+import {
+  emptyDocument,
+  parseDocument,
+  validateDocument,
+} from "../packages/document/index.ts";
+import { History, applyCommands } from "../packages/engine/history/index.ts";
+import { createNode } from "../packages/widgets/index.ts";
+test("world/screen inverse across supported coordinate and zoom bounds", () => {
+  for (const zoom of [0.1, 0.25, 1, 4])
+    for (const x of [-1e6, -10.7, 0, 17, 1e6]) {
+      const camera = { x: 800000, y: -999999, zoom };
+      const p = { x, y: x / 3 };
+      const result = screenToWorld(worldToScreen(p, camera), camera);
+      assert.ok(Math.abs(result.x - p.x) < 1e-8);
+      assert.ok(Math.abs(result.y - p.y) < 1e-8);
+    }
+});
+test("cursor zoom preserves anchor even when zoom is clamped", () => {
+  const c = { x: -132, y: 754, zoom: 0.7 };
+  const anchor = { x: 415, y: 297 };
+  for (const requested of [0.001, 0.9, 1000]) {
+    const before = screenToWorld(anchor, c),
+      next = zoomAt(c, anchor, requested),
+      after = screenToWorld(anchor, next);
+    assert.ok(Math.abs(before.x - after.x) < 1e-9);
+    assert.ok(Math.abs(before.y - after.y) < 1e-9);
+    assert.ok(next.zoom >= 0.1 && next.zoom <= 4);
+  }
+});
+test("transaction is atomic and rejects duplicate IDs or invalid geometry", () => {
+  const doc = emptyDocument();
+  const node = createNode("note", 20, 30);
+  assert.throws(() =>
+    applyCommands(doc, [
+      { type: "create", node },
+      { type: "create", node },
+    ]),
+  );
+  assert.equal(doc.nodes.length, 0);
+  assert.throws(() =>
+    applyCommands(doc, [
+      { type: "create", node },
+      { type: "update", id: node.id, patch: { x: NaN } },
+    ]),
+  );
+  assert.equal(doc.nodes.length, 0);
+});
+test("history preserves transactions, branches and immutable reads", () => {
+  const h = new History(emptyDocument()),
+    node = createNode("note", 0, 0);
+  h.execute([{ type: "create", node }]);
+  h.execute([{ type: "update", id: node.id, patch: { x: 100 } }]);
+  h.undo();
+  assert.equal(h.document.nodes[0].x, 0);
+  h.redo();
+  assert.equal(h.document.nodes[0].x, 100);
+  const leaked = h.document;
+  leaked.nodes[0].x = 99;
+  assert.equal(h.document.nodes[0].x, 100);
+  h.undo();
+  h.execute([{ type: "update", id: node.id, patch: { text: "branch" } }]);
+  assert.equal(h.canRedo, false);
+  h.undo();
+  h.undo();
+  assert.equal(h.document.nodes.length, 0);
+});
+test("import roundtrip, future format and hostile fields", () => {
+  const doc = emptyDocument();
+  doc.nodes.push(createNode("text", -500, 300));
+  assert.deepEqual(parseDocument(JSON.stringify(doc)), doc);
+  assert.throws(() => validateDocument({ ...doc, schemaVersion: 2 }));
+  assert.throws(() =>
+    parseDocument(
+      JSON.stringify({
+        ...doc,
+        extra: "future data must not be silently discarded",
+      }),
+    ),
+  );
+  assert.throws(() =>
+    validateDocument({ ...doc, nodes: [{ ...doc.nodes[0], color: "url(x)" }] }),
+  );
+  assert.throws(() =>
+    applyCommands(doc, [
+      {
+        type: "update",
+        id: doc.nodes[0].id,
+        patch: JSON.parse('{"__proto__":{}}'),
+      },
+    ]),
+  );
+  assert.throws(() => parseDocument("x".repeat(5_000_001)));
+});
+test("history retains bounded undo depth", () => {
+  const h = new History(emptyDocument());
+  const node = createNode("shape", 0, 0);
+  h.execute([{ type: "create", node }]);
+  for (let i = 1; i <= 80; i++)
+    h.execute([{ type: "update", id: node.id, patch: { x: i } }]);
+  let undoCount = 0;
+  while (h.canUndo) {
+    h.undo();
+    undoCount++;
+  }
+  assert.equal(undoCount, 50);
+  assert.equal(h.document.nodes[0].x, 30);
+});

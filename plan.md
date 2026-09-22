@@ -1,172 +1,145 @@
-# Infinite Canvas Platform — Development Plan
+# Infinite Dashboard — a durable spatial workspace
 
-> **Status:** Proposal for review. No engine implementation or migration has started.
-> **Repository:** https://github.com/RicardoGV2/dashboards
-> **Current demo:** The existing root `index.html`, `styles.css`, and `script.js` remain the active GitHub Pages site until an explicit migration decision.
+Revision: 2026-09-22. This supersedes [the initial proposal](docs/initial-plan.md).
 
-## 1. Product vision
+## Direction
 
-Build an extensible, browser-based infinite workspace where users can position, edit, connect, animate, and export many kinds of content on one continuous canvas: shapes and freehand drawing, charts, editable spreadsheets, text, code, flowcharts/Mermaid, photos, video, and future custom widgets. The canvas is a shared spatial environment rather than a fixed dashboard grid.
+Build a workspace where people and software agents arrange, edit and connect typed content on a continuous plane. The enduring asset is the user's **meaningful document**: data, relationships, computations, spatial intent and history. Visuals are projections of that document. The product must remain useful without an AI provider, GPU acceleration or a network connection after loading.
 
-### Principles
+Own the document format, operation semantics, coordinate mathematics and extension interfaces. Use specialist libraries for spreadsheet calculation, charting, code editing and media when justified. “Our own engine” does not mean recreating browsers, video codecs or every numerical algorithm.
 
-- **Own the engine:** Implement camera, geometry, scene graph, interactions, rendering orchestration, document model, and plugin contracts in our code. No dependence on a third-party infinite-canvas SDK.
-- **Use specialist components:** It is acceptable to integrate charting, code editing, media playback, formula calculation, and Mermaid as encapsulated widgets. We do not need to recreate browser capabilities or every editor from scratch.
-- **Separate concerns:** A framework-independent TypeScript engine, an independent document model, pluggable widgets, and a React web shell.
-- **Precise, not literally limitless:** Use world-space coordinates, zoom transforms, and device-pixel-ratio-aware rendering. A large canvas is constrained by floating-point precision, GPU memory, DOM and browser limits; address those deliberately.
-- **Progressive complexity:** Start offline-first with local persistence and explicit import/export. Add accounts, server storage, and collaboration only when needed.
-- **Protect user work:** Version documents, validate imported data, provide undo/redo, and test migrations before changing formats.
+No implementation can guarantee compatibility with unknown hardware or every device. We can define portable contracts, export data, support a measured device matrix and keep optional technologies replaceable. Native apps can also last; web is our first distribution surface because it is easy to access and update. Portability comes from the core and open format, not merely the choice of web.
 
-## 2. Hosting and deployment decision
+## Review of the original plan and structure
 
-**Keep GitHub for source control.** Keep the existing demo on GitHub Pages while reviewing this plan. GitHub Pages is appropriate for an initial, static client-side editor; it does not run our own persistent application backend. A later hosted frontend can remain in this same GitHub repository and use a separate API, database, and asset store. Reassess hosting when the app needs multi-device sync, authentication, uploaded media, shared workspaces, or server computations. Do not store user documents or access tokens in the repository or client bundle.
+The repository at `5c8a688` contained a sample page and README-only directories; there was no runnable canvas, package manifest, test suite, engine, persistence or widget implementation. The original plan made sound choices about world coordinates, a framework-independent core, local storage and owning the engine.
 
-**Deployment guardrail:** Do not change the root `index.html`, `styles.css`, `script.js`, Pages source, or deployment settings during the planning/scaffolding step. A future migration to Vite must account for the project-site base path `/dashboards/`, and switch deployment only after a verified production build and explicit approval.
+Changes needed:
 
-## 3. Proposed repository layout
+| Gap | Consequence | Revised decision |
+| --- | --- | --- |
+| Scene graph and data model treated together | UI choices can trap meaningful data inside pixels or widget code | Separate semantic entities/dataflow from spatial views as rich widgets arrive |
+| Transactions vague, introduced late | AI and UI can mutate state inconsistently; undo becomes fragile | All committed edits pass validation through atomic commands from the first slice |
+| “Every device” lacked a support definition | Unverifiable promise | Capability tiers and an explicit release matrix |
+| Persistence deferred until after gestures | Early work can be lost | Autosave and export in the first slice; recovery and migrations before beta |
+| Widgets listed without trust boundaries | Arbitrary generated code could run with application authority | Trusted bundled widgets first; isolated third-party runtime later |
+| AI was absent from execution model | Retrofitting permissions, previews and provenance later is expensive | Design proposal/validation/commit protocol now; implement backend later |
+| Performance specified as vague smoothness | No meaningful scale claim | Reproducible reference workloads, p95 latency and resource budgets |
+| Too many empty packages and early framework commitment | Maintenance before proven interfaces | Small typed modules, no artificial publishable workspace packages yet |
+| No computation graph or precision policy | Tables/charts could show inconsistent or hallucinated results | Typed data bindings and deterministic formula evaluation before AI-driven dashboards |
+
+## Architecture and dependency rules
 
 ```text
-dashboards/
-├── index.html                 # Existing live demo — retained for now
-├── styles.css                 # Existing live demo — retained for now
-├── script.js                  # Existing live demo — retained for now
-├── README.md                  # Existing demo readme — retained for now
-├── plan.md                    # This proposal
-├── apps/
-│   └── web/                   # Future React + TypeScript + Vite application
-├── packages/
-│   ├── engine/                # Framework-independent canvas engine
-│   │   ├── camera/            # World/screen transforms, pan/zoom
-│   │   ├── geometry/          # Bounds, matrices, hit testing
-│   │   ├── renderer/          # Scene traversal, Canvas 2D and DOM integration
-│   │   ├── interactions/      # Pointer, keyboard, touch, tool state
-│   │   ├── spatial/           # Visibility queries, spatial indexing
-│   │   └── history/           # Commands, transactions, undo/redo
-│   ├── document/              # Versioned objects, relations, assets, serialization
-│   ├── widgets/               # Registry, widget contracts and implementations
-│   └── ui/                    # Shared React interface components
-├── tests/                     # Unit, integration, regression and browser tests
-└── .github/
-    └── workflows/             # CI and, later, approved deployment workflows
+People / AI adapters / importers
+             |
+     proposed commands
+             |
+ validation + authorization + revision preconditions
+             |
+ atomic document commit + undo / journal
+             |
+ semantic entities + dataflow + assets + spatial views
+             |
+ scene projection and viewport visibility
+             |
+ DOM / Canvas 2D / optional GPU / optional remote stream
 ```
 
-For now these directories contain documentation placeholders, **not a configured runnable monorepo**. Do not run `npm install` at the repository root expecting a package manifest until Phase 0 is approved and implemented.
+This is the target architecture; the current implementation is intentionally smaller. The first schema contains three spatial object types and no semantic graph or AI adapter yet.
 
-## 4. Engine design
+- `packages/document`: serializable data, versions, validation. No DOM, React, storage, network or provider imports.
+- `packages/engine`: camera/geometry, commands/history, visibility and renderer adapters. Math/history must remain usable in Node or a worker. Browser renderer code lives behind the adapter boundary.
+- `packages/widgets`: type definitions and trusted adapters. The first registry supplies note/text/shape defaults. It is **not yet** the full plugin protocol.
+- `packages/storage`: browser IndexedDB adapter, replaceable later by file or server adapters.
+- `apps/web`: composition, UI, browser inputs and lifecycle. Current lightweight TypeScript shell; React is optional if shell complexity justifies it.
+- `packages/ui`: reserved documentation only. Do not introduce a UI library until reuse exists.
+- Planned `packages/dataflow`, `packages/assets`, `packages/agent-protocol` and `services/gateway`: create when their first feature ships; do not scaffold empty frameworks.
 
-### 4.1 Camera and geometry
+The existing camera/geometry/interactions/spatial/history layout remains useful, but empty modules are explicitly marked planned. As gesture complexity grows, extract and test the pointer state machine from `apps/web/main.ts` before adding drawing or nested editing.
 
-- World coordinates are independent from screen CSS pixels and device pixels. Model `screen = (world - camera) * zoom`, with a tested inverse.
-- Zoom around the cursor; support mouse wheel, trackpad, keyboard, and touch gestures, with configurable limits.
-- Maintain explicit matrix transforms for translation, scale, rotation, parenting and nested objects.
-- Implement deterministic bounding-box calculations, rotated hit testing, snapping and alignment guides.
-- Investigate origin rebasing or chunked coordinates if very large world positions cause observable precision loss.
+## What must survive renderer and AI changes
 
-### 4.2 Document and scene graph
+1. Stable IDs and portable, versioned JSON with independently stored binary assets.
+2. Semantic values, units, formulas, connections and source provenance. Never treat generated pixels as the authoritative numeric data.
+3. Explicit operations: create, update, delete; later group, connect, bind, compute. Commands produce deterministic validated state for a given input. Random IDs and timestamps are supplied at the boundary.
+4. Independent spatial views: a dataset can have a table view, a chart view and a generated visual without duplicating its underlying truth.
+5. Human-readable exports and defined migrations. Future versions are rejected safely until supported; unknown data must never be silently removed.
+6. Capability discovery: optional features advertise what they support. Adapter failure must preserve the document and enable a simpler view/export.
 
-- Stable IDs; typed/versioned nodes; transforms; stacking order; visibility; locking; groups; parent-child ownership.
-- Explicit connector edges and references rather than relying on array order or ad hoc widget IDs.
-- Separate document data from runtime objects and DOM nodes; support schema validation and migrations.
-- Track asset metadata and references separately from large binary payloads.
-- Include a transaction/command layer to enable undo/redo, reproducible tests and eventual collaboration.
+For an AI-generated image or streamed interface, keep a semantic sidecar: object IDs, accessible labels, hit regions, data references and allowed actions. A flat frame alone cannot reliably support exact editing, accessibility or formula auditing. Sidecars are an interface proposal, not an existing NVIDIA or xAI standard.
 
-### 4.3 Rendering and interaction
+## Mathematics: durable foundation, not a secret by itself
 
-- Start with a hybrid scene: Canvas 2D for the background and simple shapes, positioned DOM/React portals for genuinely interactive widgets, and a synchronized overlay for selection and tools.
-- Keep one authoritative camera and coordinate transform across canvas, overlays and widgets.
-- Define event ownership: pointer capture, editor focus, drag versus pan, nested scroll, keyboard shortcuts, touch and accessibility.
-- Add viewport culling and image/media lifecycle handling before using very large documents.
-- Profile before adopting OffscreenCanvas, WebGL, WebGPU or worker-based rendering. Provide feature detection and fallbacks.
+- Distinguish world units, viewport CSS pixels and device pixels. Current camera: `screen = (world - cameraOrigin) × zoom`; inverse: `world = screen / zoom + cameraOrigin`.
+- Cursor/pinch anchor invariant: the world point under the zoom anchor remains fixed, except when explicit world safety bounds clamp movement.
+- Commit object transforms in world space. Floating DOM positions are disposable projections.
+- Current release supports node origins in ±1,000,000 world units, 0.1–4× zoom and sizes 80–4,000 × 60–4,000 units. “Infinite” describes navigation, not unbounded numeric precision.
+- Before rotation/groups: implement invertible affine matrices, composition order, local/world transforms and degeneracy checks. Test inverse and parent-child invariants.
+- Before truly huge distances: introduce chunk coordinates plus local offsets, origin rebasing and version migration. Never just expand floating-point bounds without error measurements.
+- Before dense scenes: use measured spatial indexing, screen-error-based level of detail, deterministic hit-testing and stable ordering.
+- Before charts/tables: typed dependency DAG, cycle detection, incremental recomputation, units and precision rules. Money requires explicit decimal semantics, not arbitrary binary float rounding. Formula execution must not use JavaScript `eval`.
+- Before animation: explicit document time and pure evaluation at time `t`; runtime playback clocks must not rewrite the document every frame.
 
-### 4.4 Widget architecture
+The likely differentiation is how well spatial reasoning, reusable data relationships, precise editing and AI-assisted transformations work together. Common math algorithms alone are unlikely to be a moat.
 
-Every widget type should declare a versioned type ID, schema/validation, default creation, editing/inspection UI, renderer, serialize/deserialize, migration and export hooks. The engine must not know the internal data schema of individual widgets. A chart, spreadsheet, video or Mermaid diagram should be movable and resizable using the same core primitives, but edit its own content in a focused mode. Avoid nesting a second pan-and-zoom engine inside the main canvas.
+## Technology direction: evidence vs bets
 
-### 4.5 Pixel-management scope
+Research checked 2026-09-22; links in [technology notes](docs/technology-notes.md).
 
-Distinguish (1) world-unit positioning, (2) pixel-precise layout and exported dimensions, and (3) raster pixel editing. Start with the first two; introduce a dedicated raster widget/editor with image buffers, brushes, masks and compositing in a later phase. Specify CSS-pixel versus physical-pixel semantics and device pixel ratio for screenshots/exports.
-
-## 5. Phased milestones and acceptance criteria
-
-### Phase 0 — Foundation and decisions
-
-**Deliver:** Adopt package manager/workspace tooling; establish TypeScript strict mode, formatter/linter, unit tests and browser smoke tests; choose a document-schema strategy; define accessibility baseline and license/dependency policy; prototype camera math; establish GitHub Actions build checks without changing existing Pages deployment.
-
-**Exit criteria:** New workspace builds and tests locally and in CI; a documented design decision records the engine/renderer boundary; existing sample page is still deployable. Review and approve Phase 0 before starting it.
-
-### Phase 1 — Working infinite canvas
-
-**Deliver:** World-space camera, cursor-centered zoom, pan, background grid, create/select/move/resize simple objects, shared keyboard/pointer handling and a minimal inspector.
-
-**Exit criteria:** Zooming preserves the world point below the cursor; inverse-transform tests pass; objects keep world positions across viewport changes; basic mouse, trackpad and touch navigation works; no noticeable interaction regressions on a representative desktop scene.
-
-### Phase 2 — Editor and durable documents
-
-**Deliver:** Multi-select, grouping, alignment, snap guides, layers, locking, undo/redo, IndexedDB autosave with recovery states, JSON import/export and schema migrations.
-
-**Exit criteria:** Refresh restores a saved document; import/export round trips without silent loss; undo/redo works for moves, resizes and creates; corrupt or incompatible documents produce actionable errors and do not overwrite existing work.
-
-### Phase 3 — Widget system
-
-**Deliver:** Widget registry/contract, text, image, charts, Mermaid, code blocks and a first editable table. Separate external datasets and widget bindings from spatial node state.
-
-**Exit criteria:** A new widget can be added without edits to camera code; every shipped widget can be selected, moved, resized, saved and restored; edit mode does not accidentally pan/drag the canvas; assets and inputs are sanitized appropriately.
-
-### Phase 4 — Media, precision and scale
-
-**Deliver:** Video lifecycle and poster frames, animation timeline, optional raster pixel editor, large-image handling, viewport culling, spatial index, object batching and performance profiling.
-
-**Exit criteria:** Off-screen media does not consume avoidable resources; high-DPI rendering and exports have defined dimensions; large-scene benchmarks and memory measurements are recorded; any GPU optimization has a tested fallback.
-
-### Phase 5 — Cloud and collaboration (only if needed)
-
-**Deliver:** Authentication, ownership/permissions, backend API, database, object storage, sync protocol and eventually CRDT/operational collaboration where justified.
-
-**Exit criteria:** Users can safely recover documents across devices; authorization is checked on the server; concurrent edits and conflict recovery are tested; secrets remain on the server; hosting meets actual usage requirements.
-
-## 6. Nonfunctional requirements
-
-- **Accessibility:** Keyboard navigation, labels, focus management, reasonable alternatives for visually edited content and reduced-motion support.
-- **Performance:** Target smooth 60 FPS interaction on a defined reference device/scene; measure frame time, DOM count, memory, file size and asset decoding instead of promising unlimited scale.
-- **Security:** Treat imported files and widget content as untrusted; sanitize HTML/SVG/Mermaid output, restrict iframe/embed origins, avoid arbitrary execution of user-authored code in the main origin, and enforce server-side permissions when backend features arrive.
-- **Privacy:** Prefer local-only work by default initially; make uploads and sharing explicit.
-- **Compatibility:** Test current major browsers, high-DPI screens and touch inputs; gracefully degrade optional graphics acceleration.
-- **Testing:** Unit-test coordinate math and history; integration-test storage/migrations/widgets; browser-test input behavior and production-build navigation. Include visual regression snapshots for precision-sensitive changes.
-
-## 7. Initial technical choices (proposals, not commitments)
-
-| Area | Starting point | Reason / decision trigger |
+| Technology | What it changes | What we do |
 | --- | --- | --- |
-| Core | TypeScript (no React dependency) | Portable, testable engine logic. |
-| Web shell | React + Vite | UI components and static build for Pages. |
-| Rendering | Canvas 2D + DOM overlay | Editable HTML widgets and owned shape renderer. |
-| Storage | IndexedDB + explicit JSON export | Offline-first, no backend for initial releases. |
-| Geometry/spatial | Small in-house math layer; add spatial index when measured | Avoid premature heavyweight dependencies. |
-| Charts / code / diagrams | Independent widget adapters | Reuse focused libraries while retaining engine ownership. |
-| CI | GitHub Actions for lint, test and build | Do not alter Pages settings until migration is approved. |
-| Backend | Undecided | Choose only when product requirements justify it. |
+| NVIDIA neural rendering / generated pixels | How visuals are synthesized, with specific runtime/hardware integrations | Keep visual output replaceable; do not make dashboard correctness depend on it |
+| AI agents and structured tool calls | Who proposes edits and computation | Typed, bounded proposals using the same command path as human input |
+| Claimed xAI binary/0–1 programming direction | Exact claim not verified in official material | No speculative binary format or provider dependency; accept future adapters through stable contracts |
+| WebGPU | Optional graphics/compute acceleration | Feature-detect adapter/limits, handle device loss, keep a baseline renderer |
+| WebAssembly / workers | Potential portable compute and responsiveness | Add only for measured bottlenecks behind message-based interfaces |
+| Remote streamed/generated views | Possible low-power-device display route | Optional backend adapter; retains semantic navigation and export, accounts for latency/privacy/cost |
+| WebXR / spatial devices | Another input/view environment | Later experiment using shared semantic data; no promise of zero-cost portability |
 
-## 8. Risks and mitigations
+AI may become much more involved in software and rendering, but this is a scenario to support rather than a certain replacement schedule for conventional applications.
 
-| Risk | Mitigation |
-| --- | --- |
-| Building an editor engine takes substantial effort | Ship testable milestones; keep the first renderer and object set small. |
-| Divergent Canvas/DOM coordinates | Centralize matrices and test transforms end to end. |
-| Browser/GPU limits with very large documents | Culling, asset LOD, profiling and documented practical limits. |
-| Document corruption or incompatible versions | Version schemas, validate, migrate, and preserve recovery/export paths. |
-| Widget input conflicts | Explicit tool state and event ownership; editor-focus tests. |
-| Unsafe rich content or user code | Sanitize, sandbox and set restrictive embed policies. |
-| Premature backend/hosting costs | Local-first MVP; defer services until required. |
-| Breaking the current demo | Preserve root files and Pages source until approved migration. |
+## AI command protocol (design, not implemented)
 
-## 9. Decisions to review before implementation
+Use a proposal envelope with `protocolVersion`, `proposalId`, `documentId`, `baseRevision`, `actor`, `capabilities`, `commands`, and provenance. Validate size, types, referenced IDs, data access, compute budgets and revision before preview. Human confirmation policy depends on effect: local reversible edits may be allowed; external uploads, paid jobs, arbitrary execution or publishing need their own authority.
 
-1. Is the primary workflow an open-ended whiteboard, a dashboard/dataflow builder, or both equally?
-2. Is single-user, local-first the right first release, or is cross-device sync essential immediately?
-3. Which two or three widgets must ship first after shapes (e.g., chart, text and table)?
-4. Should raster pixel editing be a full editor or an image-annotation feature initially?
-5. Which browsers/devices and file sizes should establish initial performance targets?
-6. Are third-party specialist libraries acceptable if the canvas engine itself is fully ours?
-7. After confirming the current Pages demo works, should we create the Phase 0 development branch and keep deployment on `main` until the new app is ready?
+Preview is side-effect free. Commit is atomic and idempotent by proposal ID. Stale proposals return a conflict rather than overwriting intervening work. Record accepted operations and their sources; undo a proposal as one transaction. Never put provider credentials into the static frontend. Backend gateway owns secrets, provider selection, quotas and authorization. An agent is not a security boundary and its output is always untrusted.
 
-**Next action:** Review this plan and confirm the current sample page is accessible. Do not start engine implementation or migrate hosting until the plan has been reviewed.
+The current `Command` TypeScript union is a local building block only. It is not a network authorization layer or a production agent protocol.
+
+## Device and accessibility contract
+
+Baseline: modern desktop Chrome/Edge, Firefox and Safari; iOS Safari and Android Chrome. Support keyboard, mouse, trackpad and Pointer Events touch/pen through common interactions. No GPU requirement. Touch has two-finger pan/zoom, object dragging and a visible pan tool. Single-finger drag on empty space pans. Trackpad scroll pans; Ctrl/⌘ wheel zooms. Browser page zoom remains available through browser controls outside the canvas gestures.
+
+Keep a semantic object list and form-based editing so the spatial view is not the only route to content. Provide visible focus, keyboard movement, explicit zoom/fit controls, reduced motion and labels. Before beta: screen-reader verification, touch target audit, focus restoration, mobile virtual keyboard tests and a list-focused editing mode for small screens.
+
+Automated browser engines and emulated phones are useful checks, not physical-device certification. Test real iPhone/iPad Safari, Android Chrome with modest memory, a desktop keyboard/screen reader and a high-DPI desktop before claiming broad support.
+
+## Persistence, safety and performance
+
+First slice: IndexedDB saves acknowledged on transaction completion, serialized writes, a previous snapshot retained, visible failure state, manual JSON export, import validation, single writer tab using Web Locks. A second tab can edit/export but cannot autosave. Browsers without Web Locks use manual export. On corrupt saved content, stop autosave so recovery data is not overwritten.
+
+Limitations to resolve before beta: recovery UI, multi-document catalog, tested schema migrations, durable incremental journal, pending-write close warning, conflict handling across devices and clearer save/export onboarding. Browser storage may be evicted; it is not a backup. Initial application loading requires connectivity; offline reload needs a later cache/service worker policy.
+
+Current safety caps: 2,000 objects, 5 MB imported UTF-8 JSON, 20,000 characters/object and 50 undo snapshots with an approximate 10-million-character history budget. These are guardrails, not performance promises. Undo storage and JSON serialization are still proportional to document size. There is viewport culling but a linear scan and DOM rebuilding; fix after profiling before claiming dense-scene support.
+
+Performance gates to measure (targets, not achieved claims): desktop 1,000 simple nodes with ≤150 visible, p95 pan/zoom frame time <16.7 ms; midrange mobile 300 nodes with ≤50 visible, p95 <33 ms; input feedback p95 <100 ms. Record browser/device, workload, viewport, zoom, memory and test duration. Never compare arbitrary benchmark totals without visible-node counts and widget complexity.
+
+## Milestones with concrete exit criteria
+
+| Milestone | Deliverables | Exit gate |
+| --- | --- | --- |
+| A — Working foundation (this branch) | Strict TS, portable camera/model/commands, DOM view, note/text/shape, move/resize, undo/redo, object list, touch gestures, IndexedDB, import/export, CI | Unit invariants, browser save/restore/input tests, production build at `/dashboards/`; known limits documented |
+| B — Reliability beta | Extract input state machine, recovery UI, migration fixtures, multi-document support, save lifecycle, keyboard/focus polish, real device matrix | No silent overwrite on corrupt/future files; recover from quota/abort/reload; accessibility and physical-device checks |
+| C — Useful data dashboard | Dataset entities, bindings, typed computations, chart and editable table, text/code/Mermaid adapters | Same dataset updates table and chart; cycle/errors surfaced; no eval; saved/imported bindings remain intact |
+| D — AI co-editor | Proposal schema, diff preview, revision/idempotency checks, backend provider adapter and authority boundaries | Same results through human and agent commands; bad/stale proposals cannot partially mutate state; no browser secrets |
+| E — Media and performance | Assets with hashes, image/video lifecycle, drawing, animation, LOD/spatial indexing; optional Canvas2D/GPU adapters | Measured workloads meet target budgets; visible fallbacks; media pause/cleanup; exact export dimensions |
+| F — Shared workspaces | Auth, server permissions, object storage, sync, conflict handling and possibly CRDT | Revocation works server-side; offline concurrent edits converge under a documented conflict policy; recovery tests |
+
+Do not begin a full spreadsheet, raster editor, collaborative protocol and new GPU renderer simultaneously. Complete one useful vertical workflow per milestone. Proposed first workflow after foundation: paste tabular data → edit table → linked chart → ask AI for a reversible rearrangement or transformation.
+
+## Hosting and review
+
+GitHub Pages can host the static editor. Backend services are separate when introduced. Keep GitHub as source control. Build output is `apps/web/dist` with base `/dashboards/`; current CI validates it without deploying. Original root sample files are not reused by the editor. Publishing the new application requires an explicit deployment step after review. Current branch provides implementation and roadmap for that review, not a claim of a completed universal dashboard.
+
+Assumptions: single-user local-first initially, trusted bundled widgets, precise data semantics before generative styling. These are reversible product choices. No additional approval is required for the foundation work requested in this conversation.

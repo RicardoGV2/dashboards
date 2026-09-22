@@ -1,3 +1,3 @@
-# Canvas engine (planned)
+# Engine
 
-Framework-independent TypeScript core owned by this repository. The six subdirectories partition camera, geometry, rendering, interactions, spatial indexing, and history. These are architectural placeholders, not implemented APIs. See [`../../plan.md`](../../plan.md).
+Implemented: pure camera math (`camera/index.ts`), atomic commands and bounded history (`history/index.ts`), culled DOM renderer adapter (`renderer/index.ts`). The input controller currently lives in `apps/web/main.ts`; extraction is planned before drawing or nested widgets. Geometry/spatial folders remain design placeholders. Math/history have no browser or framework dependency.
