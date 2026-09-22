@@ -67,13 +67,9 @@ export function applyCommands(
       if (
         Object.keys(command.patch).some(
           (key) =>
-            ![
-              "kind",
-              "label",
-              "animated",
-              "amountCents",
-              "currency",
-            ].includes(key),
+            !["kind", "label", "animated", "amountCents", "currency"].includes(
+              key,
+            ),
         )
       )
         throw new Error("Unsupported connection update field.");

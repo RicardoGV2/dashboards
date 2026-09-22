@@ -1,10 +1,4 @@
-export type NodeKind =
-  | "note"
-  | "text"
-  | "shape"
-  | "image"
-  | "cube"
-  | "finance";
+export type NodeKind = "note" | "text" | "shape" | "image" | "cube" | "finance";
 
 export type ImageMimeType =
   | "image/png"
@@ -239,7 +233,8 @@ function validateFinance(value: unknown): value is FinanceNodeData {
   )
     return false;
   if (value.brand !== undefined && !string(value.brand, 100)) return false;
-  if (value.category !== undefined && !string(value.category, 100)) return false;
+  if (value.category !== undefined && !string(value.category, 100))
+    return false;
   if (
     value.amountCents !== undefined &&
     !integer(value.amountCents, -100_000_000_000, 100_000_000_000)

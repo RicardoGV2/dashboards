@@ -224,7 +224,6 @@ test("image upload and animated cube controls persist", async ({ page }) => {
   ]);
 });
 
-
 test("finance visualization adds animated flows without removing existing widgets", async ({
   page,
 }) => {
@@ -259,7 +258,10 @@ test("finance visualization adds animated flows without removing existing widget
   await ricardo.locator("[data-finance-toggle]").click();
   await expect(page.locator(".canvas-node.finance-bank")).toHaveCount(4);
 
-  await page.locator("#object-list button").filter({ hasText: "Ricardo" }).click();
+  await page
+    .locator("#object-list button")
+    .filter({ hasText: "Ricardo" })
+    .click();
   await expect(page.locator("#finance-details")).toBeVisible();
   await expect(page.locator("#finance-details")).toContainText("Banks (2)");
   await expect(page.locator("#finance-details")).toContainText("Total balance");

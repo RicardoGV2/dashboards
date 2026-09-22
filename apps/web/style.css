@@ -765,7 +765,6 @@ select {
   }
 }
 
-
 /* finance flow visualization */
 #connections {
   position: absolute;
@@ -812,7 +811,9 @@ select {
   height: 8px;
   border-radius: 50%;
   background: #43e6a8;
-  box-shadow: 0 0 0 4px #43e6a81c, 0 0 12px #43e6a8;
+  box-shadow:
+    0 0 0 4px #43e6a81c,
+    0 0 12px #43e6a8;
 }
 #flow-legend {
   left: 24px;
@@ -922,8 +923,11 @@ select {
   padding: 14px;
   border: 1px solid var(--finance-border);
   border-radius: 16px;
-  background:
-    linear-gradient(145deg, color-mix(in srgb, var(--node-color) 13%, #101a2a), #0c1422 65%);
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--node-color) 13%, #101a2a),
+    #0c1422 65%
+  );
   color: #edf4ff;
   box-shadow:
     0 14px 36px #02061752,
@@ -969,7 +973,11 @@ select {
   border-radius: 31px;
   background:
     radial-gradient(circle at 50% 30%, #ffffff18, transparent 38%),
-    linear-gradient(145deg, color-mix(in srgb, var(--node-color) 72%, #27324a), #101827);
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--node-color) 72%, #27324a),
+      #101827
+    );
   color: #fff;
   box-shadow:
     0 0 0 7px color-mix(in srgb, var(--node-color) 12%, transparent),
@@ -1004,7 +1012,11 @@ select {
   padding-top: 17px;
   border-color: color-mix(in srgb, var(--node-color) 66%, #3c4b63);
   background:
-    radial-gradient(circle at 50% 18%, color-mix(in srgb, var(--node-color) 16%, transparent), transparent 40%),
+    radial-gradient(
+      circle at 50% 18%,
+      color-mix(in srgb, var(--node-color) 16%, transparent),
+      transparent 40%
+    ),
     linear-gradient(145deg, #122139, #0d1726);
 }
 .bank-city {
@@ -1031,8 +1043,18 @@ select {
   width: 74px;
   height: 43px;
   border-bottom: 9px solid #30435f;
-  background:
-    linear-gradient(90deg, #465c7b 0 11%, transparent 11% 22%, #465c7b 22% 33%, transparent 33% 44%, #465c7b 44% 55%, transparent 55% 66%, #465c7b 66% 77%, transparent 77% 88%, #465c7b 88% 100%);
+  background: linear-gradient(
+    90deg,
+    #465c7b 0 11%,
+    transparent 11% 22%,
+    #465c7b 22% 33%,
+    transparent 33% 44%,
+    #465c7b 44% 55%,
+    transparent 55% 66%,
+    #465c7b 66% 77%,
+    transparent 77% 88%,
+    #465c7b 88% 100%
+  );
   box-shadow: inset 0 -7px 0 #23334a;
 }
 .bank-brand {

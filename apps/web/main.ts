@@ -75,8 +75,7 @@ function visibleNodes(document: CanvasDocument): CanvasNode[] {
   const expanded = new Map(
     document.nodes
       .filter(
-        (node) =>
-          node.kind === "finance" && node.finance?.role === "person",
+        (node) => node.kind === "finance" && node.finance?.role === "person",
       )
       .map((node) => [node.id, node.finance?.expanded !== false]),
   );
@@ -90,8 +89,7 @@ function visibleNodes(document: CanvasDocument): CanvasNode[] {
 function visibleConnections(document: CanvasDocument, nodes: CanvasNode[]) {
   const visible = new Set(nodes.map((node) => node.id));
   return document.connections.filter(
-    (connection) =>
-      visible.has(connection.from) && visible.has(connection.to),
+    (connection) => visible.has(connection.from) && visible.has(connection.to),
   );
 }
 function status(message: string, error = false) {
@@ -168,8 +166,7 @@ function renderFinanceDetails(node: CanvasNode, doc: CanvasDocument) {
 
   if (finance.role === "person") {
     const owned = doc.nodes.filter(
-      (item) =>
-        item.kind === "finance" && item.finance?.ownerId === node.id,
+      (item) => item.kind === "finance" && item.finance?.ownerId === node.id,
     );
     const banks = owned.filter((item) => item.finance?.role === "bank");
     const income = owned
@@ -366,7 +363,10 @@ function focusNodes(nodes: CanvasNode[]) {
   const maxX = Math.max(...nodes.map((node) => node.x + node.width));
   const maxY = Math.max(...nodes.map((node) => node.y + node.height));
   const zoom = clamp(
-    Math.min((s.x - 90) / Math.max(maxX - minX, 1), (s.y - 90) / Math.max(maxY - minY, 1)),
+    Math.min(
+      (s.x - 90) / Math.max(maxX - minX, 1),
+      (s.y - 90) / Math.max(maxY - minY, 1),
+    ),
     0.1,
     1.1,
   );
@@ -476,8 +476,7 @@ function deleteSelected() {
   const commands: Command[] = [];
   if (node.kind === "finance" && node.finance?.role === "person") {
     for (const child of doc.nodes.filter(
-      (item) =>
-        item.kind === "finance" && item.finance?.ownerId === node.id,
+      (item) => item.kind === "finance" && item.finance?.ownerId === node.id,
     ))
       commands.push({ type: "delete", id: child.id });
   }

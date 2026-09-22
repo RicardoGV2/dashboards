@@ -356,13 +356,7 @@ export function createFinanceDemo(
     const kind =
       item.amount > 0 ? ("transfer" as const) : ("outgoing" as const);
     connections.push(
-      connection(
-        item.bank.id,
-        node.id,
-        kind,
-        money(item.amount),
-        item.amount,
-      ),
+      connection(item.bank.id, node.id, kind, money(item.amount), item.amount),
     );
   }
 
@@ -378,13 +372,7 @@ export function createFinanceDemo(
       "+€2,850",
       285000,
     ),
-    connection(
-      janetWork.id,
-      janetAib.id,
-      "incoming",
-      "+€3,200",
-      320000,
-    ),
+    connection(janetWork.id, janetAib.id, "incoming", "+€3,200", 320000),
     connection(ricardo.id, janet.id, "shared", "Shared goals"),
   );
 

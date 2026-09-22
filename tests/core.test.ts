@@ -202,7 +202,6 @@ test("image assets and cube animation survive validation and history", () => {
   );
 });
 
-
 test("version 2 documents migrate with empty connections", () => {
   const current = emptyDocument();
   const legacyV2 = {

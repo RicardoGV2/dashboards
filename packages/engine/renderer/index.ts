@@ -50,7 +50,8 @@ function renderFinanceNode(el: HTMLElement, node: CanvasNode) {
     const toggle = document.createElement("button");
     toggle.className = "finance-expand";
     toggle.dataset.financeToggle = node.id;
-    toggle.textContent = finance.expanded === false ? "Expand utilities" : "Collapse utilities";
+    toggle.textContent =
+      finance.expanded === false ? "Expand utilities" : "Collapse utilities";
     toggle.setAttribute(
       "aria-label",
       `${finance.expanded === false ? "Expand" : "Collapse"} ${node.title} finance utilities`,
@@ -290,7 +291,10 @@ export function renderConnections(
         particle.setAttribute("r", "4");
         particle.setAttribute("class", "flow-particle");
         const motion = document.createElementNS(SVG_NS, "animateMotion");
-        motion.setAttribute("dur", connection.kind === "incoming" ? "2.5s" : "3.2s");
+        motion.setAttribute(
+          "dur",
+          connection.kind === "incoming" ? "2.5s" : "3.2s",
+        );
         motion.setAttribute("repeatCount", "indefinite");
         motion.setAttribute("begin", `${index * 1.35}s`);
         motion.setAttribute("path", d);
