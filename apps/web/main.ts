@@ -162,6 +162,7 @@ function cancelPlacement(message = "Placement canceled") {
 
 function startPlacement(draft: PlacementDraft, sourceSelector: string) {
   if (!ready) return;
+  hideUndoToast();
   cancelGesture();
   if (
     placement &&
@@ -1062,6 +1063,7 @@ window.addEventListener("keyup", (e) => {
 });
 window.addEventListener("blur", () => {
   space = false;
+  placementPointer = null;
   cancelGesture();
 });
 $("export").onclick = () => {
