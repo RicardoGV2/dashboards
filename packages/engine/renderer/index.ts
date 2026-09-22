@@ -246,6 +246,7 @@ export function renderConnections(
   connections: CanvasConnection[],
   nodes: CanvasNode[],
   camera: Camera,
+  previewNodeIds: ReadonlySet<string> = new Set(),
 ) {
   const map = new Map(nodes.map((node) => [node.id, node]));
   const fragment = document.createDocumentFragment();
@@ -263,7 +264,12 @@ export function renderConnections(
     const d = connectionPath(source, target);
 
     const group = document.createElementNS(SVG_NS, "g");
-    group.setAttribute("class", `flow-connection ${connection.kind}`);
+    const isPreview =
+      previewNodeIds.has(connection.from) && previewNodeIds.has(connection.to);
+    group.setAttribute(
+      "class",
+      `flow-connection ${connection.kind}${isPreview ? " placement-preview" : ""}`,
+    );
 
     const glow = document.createElementNS(SVG_NS, "path");
     glow.setAttribute("d", d);
