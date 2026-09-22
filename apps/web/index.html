@@ -42,6 +42,15 @@
             </button>
           </div>
           <div class="tool-group">
+            <button
+              id="erase-all"
+              class="erase-all-tool"
+              title="Erase all canvas objects"
+            >
+              ⌫ <span>Erase</span>
+            </button>
+          </div>
+          <div class="tool-group">
             <button id="undo" aria-label="Undo" title="Undo (Ctrl/⌘ Z)">
               ↶</button
             ><button id="redo" aria-label="Redo" title="Redo (Ctrl/⌘ Shift Z)">
@@ -207,6 +216,33 @@
           ><button id="fit">Fit</button>
         </div>
       </footer>
+    </div>
+    <div
+      id="erase-confirm"
+      class="confirm-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="erase-confirm-title"
+      hidden
+    >
+      <section class="confirm-card">
+        <span class="confirm-icon" aria-hidden="true">⌫</span>
+        <h2 id="erase-confirm-title">Erase everything?</h2>
+        <p id="erase-confirm-copy">
+          This will remove every object from the canvas.
+        </p>
+        <p class="confirm-note">You can undo this immediately afterward.</p>
+        <div class="confirm-actions">
+          <button id="erase-cancel" type="button">Cancel</button>
+          <button
+            id="erase-confirm-button"
+            type="button"
+            class="confirm-danger"
+          >
+            Erase all
+          </button>
+        </div>
+      </section>
     </div>
     <input id="file" type="file" accept=".json,application/json" hidden />
     <input

@@ -1454,3 +1454,123 @@ body.placement-mode #viewport {
     bottom: 58px;
   }
 }
+
+/* erase-all confirmation */
+.erase-all-tool {
+  color: #e8a3ad;
+}
+.erase-all-tool:hover:not(:disabled),
+.erase-all-tool:focus-visible {
+  background: #3a1f2a !important;
+  color: #ffb6c1 !important;
+}
+.erase-all-tool:disabled {
+  opacity: 0.34;
+  cursor: default;
+}
+
+.confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  background: #020617c2;
+  backdrop-filter: blur(8px);
+}
+
+.confirm-card {
+  width: min(420px, 100%);
+  padding: 22px;
+  border: 1px solid #3d2b3a;
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 50% 0%, #7f1d1d18, transparent 45%), #0d1726;
+  color: #dbe8f8;
+  box-shadow:
+    0 28px 80px #020617a6,
+    inset 0 1px 0 #ffffff0b;
+  text-align: center;
+}
+
+.confirm-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 12px;
+  border: 1px solid #63313b;
+  border-radius: 14px;
+  background: #321923;
+  color: #ff9cab;
+  font-size: 23px;
+}
+
+.confirm-card h2 {
+  margin: 0 0 8px;
+  color: #f8fbff;
+  font-size: 19px;
+}
+
+.confirm-card p {
+  margin: 0;
+  color: #9cadc4;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.confirm-card .confirm-note {
+  margin-top: 8px;
+  color: #70839e;
+  font-size: 10px;
+}
+
+.confirm-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+  margin-top: 20px;
+}
+
+.confirm-actions button {
+  min-height: 40px;
+  border-radius: 9px;
+  font-weight: 700;
+}
+
+#erase-cancel {
+  border: 1px solid #30445f;
+  background: #142238;
+  color: #adbed3;
+}
+
+#erase-cancel:hover,
+#erase-cancel:focus-visible {
+  background: #1b2f4c;
+  color: #eef6ff;
+}
+
+.confirm-danger {
+  border: 1px solid #71313c;
+  background: #4b1d29;
+  color: #ffc0c9;
+}
+
+.confirm-danger:hover,
+.confirm-danger:focus-visible {
+  background: #632536;
+  color: #fff1f3;
+}
+
+@media (max-width: 650px) {
+  .confirm-backdrop {
+    align-items: end;
+    padding: 12px;
+  }
+  .confirm-card {
+    margin-bottom: max(12px, env(safe-area-inset-bottom));
+    padding: 19px;
+    border-radius: 16px;
+  }
+}
