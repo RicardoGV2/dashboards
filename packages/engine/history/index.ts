@@ -1,5 +1,6 @@
 import { validateDocument } from "../../document/index.ts";
 import type {
+  CanvasConnection,
   CanvasDocument,
   CanvasNode,
   ImageAsset,
@@ -14,13 +15,21 @@ export type Command =
     }
   | { type: "delete"; id: string }
   | { type: "createAsset"; asset: ImageAsset }
-  | { type: "deleteAsset"; id: string };
+  | { type: "deleteAsset"; id: string }
+  | { type: "createConnection"; connection: CanvasConnection }
+  | {
+      type: "updateConnection";
+      id: string;
+      patch: Partial<Omit<CanvasConnection, "id" | "from" | "to">>;
+    }
+  | { type: "deleteConnection"; id: string };
 
 export function applyCommands(
   document: CanvasDocument,
   commands: readonly Command[],
 ): CanvasDocument {
   const next = structuredClone(document);
+
   for (const command of commands) {
     if (command.type === "create") {
       next.nodes.push(structuredClone(command.node));
@@ -38,14 +47,59 @@ export function applyCommands(
       next.assets.splice(assetIndex, 1);
       continue;
     }
-
-    const index = next.nodes.findIndex((n) => n.id === command.id);
-    if (index < 0) throw new Error("Object no longer exists.");
-    if (command.type === "delete") next.nodes.splice(index, 1);
-    else if (command.type === "update") {
+    if (command.type === "createConnection") {
+      next.connections.push(structuredClone(command.connection));
+      continue;
+    }
+    if (command.type === "deleteConnection") {
+      const index = next.connections.findIndex(
+        (connection) => connection.id === command.id,
+      );
+      if (index < 0) throw new Error("Connection no longer exists.");
+      next.connections.splice(index, 1);
+      continue;
+    }
+    if (command.type === "updateConnection") {
+      const index = next.connections.findIndex(
+        (connection) => connection.id === command.id,
+      );
+      if (index < 0) throw new Error("Connection no longer exists.");
       if (
         Object.keys(command.patch).some(
-          (k) =>
+          (key) =>
+            ![
+              "kind",
+              "label",
+              "animated",
+              "amountCents",
+              "currency",
+            ].includes(key),
+        )
+      )
+        throw new Error("Unsupported connection update field.");
+      next.connections[index] = {
+        ...next.connections[index],
+        ...command.patch,
+      };
+      continue;
+    }
+
+    const index = next.nodes.findIndex((node) => node.id === command.id);
+    if (index < 0) throw new Error("Object no longer exists.");
+
+    if (command.type === "delete") {
+      next.nodes.splice(index, 1);
+      next.connections = next.connections.filter(
+        (connection) =>
+          connection.from !== command.id && connection.to !== command.id,
+      );
+      continue;
+    }
+
+    if (command.type === "update") {
+      if (
+        Object.keys(command.patch).some(
+          (key) =>
             ![
               "x",
               "y",
@@ -56,13 +110,18 @@ export function applyCommands(
               "color",
               "assetId",
               "animation",
-            ].includes(k),
+              "finance",
+            ].includes(key),
         )
       )
         throw new Error("Unsupported update field.");
       next.nodes[index] = { ...next.nodes[index], ...command.patch };
-    } else throw new Error("Unsupported command.");
+      continue;
+    }
+
+    throw new Error("Unsupported command.");
   }
+
   return validateDocument(next);
 }
 
@@ -79,9 +138,11 @@ export class History {
   get document(): CanvasDocument {
     return structuredClone(this.#document);
   }
+
   get canUndo() {
     return this.#past.length > 0;
   }
+
   get canRedo() {
     return this.#future.length > 0;
   }
