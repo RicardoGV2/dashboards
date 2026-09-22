@@ -273,8 +273,9 @@ test("finance visualization adds animated flows without removing existing widget
   await expect(page.locator("#connections .flow-connection")).toHaveCount(16);
 });
 
-
-test("dark visual theme is active before finance is added", async ({ page }) => {
+test("dark visual theme is active before finance is added", async ({
+  page,
+}) => {
   await expect(page.locator("body")).toHaveClass(/app-theme-dark/);
   await expect(page.locator("body")).not.toHaveClass(/finance-mode/);
   await expect(page.locator("#flow-banner")).toBeHidden();
