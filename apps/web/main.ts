@@ -720,6 +720,17 @@ viewport.addEventListener("pointerdown", (e) => {
     (e.button !== 0 && e.button !== 1)
   )
     return;
+
+  if (placement) {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    viewport.focus({ preventScroll: true });
+    viewport.setPointerCapture(e.pointerId);
+    placementPointer = e.pointerId;
+    movePlacementTo(screenToWorld(point(e), camera));
+    return;
+  }
+
   e.preventDefault();
   viewport.focus({ preventScroll: true });
   viewport.setPointerCapture(e.pointerId);
@@ -744,7 +755,16 @@ viewport.addEventListener("pointerdown", (e) => {
     gesture = { type: "pan", start: point(e), camera: { ...camera } };
   }
 });
+
 viewport.addEventListener("pointermove", (e) => {
+  if (
+    placement &&
+    (e.pointerType === "mouse" || placementPointer === e.pointerId)
+  ) {
+    movePlacementTo(screenToWorld(point(e), camera));
+    return;
+  }
+
   if (!pointers.has(e.pointerId) || !gesture) return;
   pointers.set(e.pointerId, point(e));
   if (gesture.type === "pinch") {
@@ -784,7 +804,15 @@ viewport.addEventListener("pointermove", (e) => {
   }
   scheduleRender();
 });
+
 viewport.addEventListener("pointerup", (e) => {
+  if (placement && placementPointer === e.pointerId) {
+    movePlacementTo(screenToWorld(point(e), camera));
+    placementPointer = null;
+    commitPlacement();
+    return;
+  }
+
   if (!pointers.has(e.pointerId)) return;
   pointers.delete(e.pointerId);
   if (preview) {
@@ -802,8 +830,20 @@ viewport.addEventListener("pointerup", (e) => {
     };
   scheduleRender();
 });
-viewport.addEventListener("pointercancel", cancelGesture);
+
+viewport.addEventListener("pointercancel", (e) => {
+  if (placementPointer === e.pointerId) {
+    placementPointer = null;
+    scheduleRender();
+    return;
+  }
+  cancelGesture();
+});
 viewport.addEventListener("lostpointercapture", (e) => {
+  if (placementPointer === e.pointerId) {
+    placementPointer = null;
+    return;
+  }
   if (pointers.has(e.pointerId)) cancelGesture();
 });
 viewport.addEventListener(
