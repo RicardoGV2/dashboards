@@ -46,7 +46,7 @@ People / AI adapters / importers
  DOM / Canvas 2D / optional GPU / optional remote stream
 ```
 
-This is the target architecture; the current implementation is intentionally smaller. The first schema contains three spatial object types and no semantic graph or AI adapter yet.
+This is the target architecture; the current implementation is intentionally smaller. The current schema contains five spatial object types (note, text, shape, image and animated cube) and no semantic graph or AI adapter yet.
 
 - `packages/document`: serializable data, versions, validation. No DOM, React, storage, network or provider imports.
 - `packages/engine`: camera/geometry, commands/history, visibility and renderer adapters. Math/history must remain usable in Node or a worker. Browser renderer code lives behind the adapter boundary.
@@ -68,6 +68,16 @@ The existing camera/geometry/interactions/spatial/history layout remains useful,
 6. Capability discovery: optional features advertise what they support. Adapter failure must preserve the document and enable a simpler view/export.
 
 For an AI-generated image or streamed interface, keep a semantic sidecar: object IDs, accessible labels, hit regions, data references and allowed actions. A flat frame alone cannot reliably support exact editing, accessibility or formula auditing. Sidecars are an interface proposal, not an existing NVIDIA or xAI standard.
+
+## Current media and motion slice
+
+Images and a controllable animated cube are the first rich-media widgets. Images are represented as canvas nodes that reference document-level assets rather than embedding pixel data directly into the node. The current local prototype stores the image asset as a validated base64 data URL inside the exported workspace JSON so import/export remains a single-file workflow; this is intentionally an intermediate format. The later `packages/assets` milestone should move binary payloads to hashed asset records/object storage while preserving stable asset IDs in the document.
+
+Supported image upload types are PNG, JPEG, WebP and GIF, currently capped at 2 MB each. SVG is deliberately excluded from this first upload path because active SVG content needs a separate sanitization and trust policy. Image nodes share move, resize, selection, undo/redo, autosave and export behavior with other objects. Deleting an image also removes its asset when nothing else references it.
+
+The cube is a first motion/3D object implemented with CSS 3D transforms behind the same renderer adapter. Its document state stores speed, direction, axis, pause state and perspective; color uses the common node color. Playback time is runtime state and does not rewrite the document every frame. This is a deliberate precursor to the later animation timeline: future motion widgets should evaluate stable document parameters against an explicit time source rather than recording every frame as edits. Reduced-motion preferences pause cube playback visually.
+
+The project/file workspace concept remains a capability of the broader canvas, not the canvas's primary identity. Future file trees, editable code, spreadsheet-like documents, media and project bundles should be added through typed widgets/assets while keeping the infinite spatial document general-purpose.
 
 ## Mathematics: durable foundation, not a secret by itself
 
@@ -121,7 +131,7 @@ First slice: IndexedDB saves acknowledged on transaction completion, serialized 
 
 Limitations to resolve before beta: recovery UI, multi-document catalog, tested schema migrations, durable incremental journal, pending-write close warning, conflict handling across devices and clearer save/export onboarding. Browser storage may be evicted; it is not a backup. Initial application loading requires connectivity; offline reload needs a later cache/service worker policy.
 
-Current safety caps: 2,000 objects, 5 MB imported UTF-8 JSON, 20,000 characters/object and 50 undo snapshots with an approximate 10-million-character history budget. These are guardrails, not performance promises. Undo storage and JSON serialization are still proportional to document size. There is viewport culling but a linear scan and DOM rebuilding; fix after profiling before claiming dense-scene support.
+Current safety caps: 2,000 objects, 100 image assets, 12 MB imported UTF-8 JSON, 2 MB per uploaded image, 20,000 characters/object and 50 undo snapshots with an approximate 10-million-character history budget. These are guardrails, not performance promises. Undo storage and JSON serialization are still proportional to document size. There is viewport culling but a linear scan and DOM rebuilding; fix after profiling before claiming dense-scene support.
 
 Performance gates to measure (targets, not achieved claims): desktop 1,000 simple nodes with ≤150 visible, p95 pan/zoom frame time <16.7 ms; midrange mobile 300 nodes with ≤50 visible, p95 <33 ms; input feedback p95 <100 ms. Record browser/device, workload, viewport, zoom, memory and test duration. Never compare arbitrary benchmark totals without visible-node counts and widget complexity.
 
@@ -133,7 +143,7 @@ Performance gates to measure (targets, not achieved claims): desktop 1,000 simpl
 | B — Reliability beta | Extract input state machine, recovery UI, migration fixtures, multi-document support, save lifecycle, keyboard/focus polish, real device matrix | No silent overwrite on corrupt/future files; recover from quota/abort/reload; accessibility and physical-device checks |
 | C — Useful data dashboard | Dataset entities, bindings, typed computations, chart and editable table, text/code/Mermaid adapters | Same dataset updates table and chart; cycle/errors surfaced; no eval; saved/imported bindings remain intact |
 | D — AI co-editor | Proposal schema, diff preview, revision/idempotency checks, backend provider adapter and authority boundaries | Same results through human and agent commands; bad/stale proposals cannot partially mutate state; no browser secrets |
-| E — Media and performance | Assets with hashes, image/video lifecycle, drawing, animation, LOD/spatial indexing; optional Canvas2D/GPU adapters | Measured workloads meet target budgets; visible fallbacks; media pause/cleanup; exact export dimensions |
+| E — Media and performance | Evolve the initial embedded image assets and cube motion into hashed asset storage, video lifecycle, drawing, timeline animation, LOD/spatial indexing; optional Canvas2D/GPU adapters | Measured workloads meet target budgets; visible fallbacks; media pause/cleanup; exact export dimensions |
 | F — Shared workspaces | Auth, server permissions, object storage, sync, conflict handling and possibly CRDT | Revocation works server-side; offline concurrent edits converge under a documented conflict policy; recovery tests |
 
 Do not begin a full spreadsheet, raster editor, collaborative protocol and new GPU renderer simultaneously. Complete one useful vertical workflow per milestone. Proposed first workflow after foundation: paste tabular data → edit table → linked chart → ask AI for a reversible rearrangement or transformation.

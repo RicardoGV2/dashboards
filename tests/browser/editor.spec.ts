@@ -152,3 +152,72 @@ test("a storage failure remains visible without discarding work", async ({
   await expect(page.locator(".canvas-node")).toHaveCount(1);
   await expect(page.locator("#export")).toBeEnabled();
 });
+
+test("image upload and animated cube controls persist", async ({ page }) => {
+  const png = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9WlYvqsAAAAASUVORK5CYII=",
+    "base64",
+  );
+  await page.locator("#image-file").setInputFiles({
+    name: "pixel.png",
+    mimeType: "image/png",
+    buffer: png,
+  });
+  await expect(page.locator(".canvas-node.image img")).toHaveCount(1);
+  await expect(page.locator("#image-info")).toContainText("pixel.png");
+  await expect(page.locator("#count")).toHaveText("1 object");
+
+  await page.locator("[data-add=cube]").click();
+  await expect(page.locator(".canvas-node.cube .cube")).toHaveCount(1);
+  await expect(page.locator("#animation-controls")).toBeVisible();
+
+  await page.locator("#animation-speed").evaluate((element) => {
+    const input = element as HTMLInputElement;
+    input.value = "180";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  await page.locator("#animation-direction").selectOption("counterclockwise");
+  await page.locator("#animation-axis").selectOption("z");
+  await page.locator("#animation-perspective").evaluate((element) => {
+    const input = element as HTMLInputElement;
+    input.value = "900";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  await page.locator("#animation-paused").check();
+  await page.locator("#color").fill("#ff3366");
+  await page.locator("#color").press("Tab");
+
+  const cube = page.locator(".canvas-node.cube .cube");
+  await expect(cube).toHaveClass(/axis-z/);
+  await expect(cube).toHaveCSS("animation-direction", "reverse");
+  await expect(cube).toHaveCSS("animation-play-state", "paused");
+
+  await expect(page.locator("#status")).toHaveText("Saved on this device");
+  await page.reload();
+  await expect(page.locator(".canvas-node.image img")).toHaveCount(1);
+  await expect(page.locator(".canvas-node.cube .cube")).toHaveCount(1);
+  await page.locator("#object-list button").filter({ hasText: "Cube" }).click();
+  await expect(page.locator("#animation-speed")).toHaveValue("180");
+  await expect(page.locator("#animation-direction")).toHaveValue(
+    "counterclockwise",
+  );
+  await expect(page.locator("#animation-axis")).toHaveValue("z");
+  await expect(page.locator("#animation-perspective")).toHaveValue("900");
+  await expect(page.locator("#animation-paused")).toBeChecked();
+
+  const downloadPromise = page.waitForEvent("download");
+  await page.locator("#export").click();
+  const download = await downloadPromise;
+  const stream = await download.createReadStream();
+  const chunks = [];
+  for await (const chunk of stream!) chunks.push(chunk);
+  const exported = JSON.parse(Buffer.concat(chunks).toString());
+  expect(exported.schemaVersion).toBe(2);
+  expect(exported.assets).toHaveLength(1);
+  expect(exported.nodes.map((node: { kind: string }) => node.kind)).toEqual([
+    "image",
+    "cube",
+  ]);
+});
