@@ -744,3 +744,25 @@ select {
     padding: 10px;
   }
 }
+
+@media (min-width: 651px) {
+  .tools {
+    min-height: 0;
+    overflow-y: auto;
+    gap: 12px;
+    padding-top: 16px;
+    padding-bottom: 16px;
+  }
+  .tools button {
+    min-height: 44px;
+    font-size: 20px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+  }
+  .tool-group {
+    gap: 3px;
+  }
+  .tool-group + .tool-group {
+    padding-top: 12px;
+  }
+}
